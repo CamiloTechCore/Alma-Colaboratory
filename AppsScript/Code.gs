@@ -114,6 +114,27 @@ function parseGASDateString(dateString) {
   Logger.log(`Fecha string "${dateString}" no coincide con el formato esperado "dd/M/yyyy; hh:mm:ss a".`); return null;
 }
 
+function parseSimpleDayDate(simpleDayStr) {
+  if (!simpleDayStr || typeof simpleDayStr !== 'string') return null;
+  
+  const months = {
+    'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5,
+    'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11
+  };
+
+  const match = simpleDayStr.match(/^(\d{1,2})\s+([a-zA-Z]{3})\s+(\d{4})$/i);
+  if (!match) return null;
+
+  const day = parseInt(match[1], 10);
+  const month = months[match[2].toLowerCase()];
+  const year = parseInt(match[3], 10);
+
+  if (isNaN(day) || month === undefined || isNaN(year)) return null;
+
+  const date = new Date(year, month, day);
+  return date;
+}
+
 function verificarUsuario(username) {
   if (!username || String(username).trim() === '') { Logger.log("Verificación sin usuario."); return { success: false, message: "Usuario no proporcionado." }; }
   const searchUsername = String(username).trim().toLowerCase();
@@ -176,47 +197,53 @@ function getLDAPUsers() {
   } catch (e) { Logger.log(`Error fatal en getLDAPUsers: ${e.message}`); return []; }
 }
 
-function getAssignments(ldap, team) {
+function getAssignments(ldap, team, simpleDayFilter) {
   if (!ldap || !team || String(ldap).trim() === '' || String(team).trim() === '') { 
     Logger.log(`getAssignments: Parámetros inválidos LDAP='${ldap}', Team='${team}'.`); 
     return { headers: [], data: [] }; 
   }
   const searchLdap = String(ldap).trim(); 
   const searchTeam = String(team).trim();
-  try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES); 
-    var sheet = ss.getSheetByName(searchTeam);
-    if (!sheet) { 
-      Logger.log(`Error: Hoja equipo '${searchTeam}' no encontrada.`); 
-      return { headers: [], data: [] }; 
-    }
-    var lastRow = sheet.getLastRow(); var headerRowIndex = sheet.getFrozenRows() || 1;
-    if (lastRow <= headerRowIndex) { Logger.log(`Hoja '${searchTeam}' vacía.`); return { headers: [], data: [] }; }
-    var dataRange = sheet.getDataRange(); var allDataValues = dataRange.getValues(); var allDataDisplayValues = dataRange.getDisplayValues();
-    var headers = allDataValues[headerRowIndex - 1].map(h => h ? String(h).trim() : '');
-    var ldapColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_USUARIO_LDAP.toLowerCase());
-    var cierreColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_CONTROL_CIERRE.toLowerCase());
-    var fechaAsignacionColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_FECHA_ASIGNACION.toLowerCase());
-    var simpleDayColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_SIMPLE_DAY.toLowerCase());
-    var aperturaColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_CONTROL_APERTURA.toLowerCase());
-    var interaccionColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_INTERACCION.toLowerCase());
-    if (ldapColIndex0Based === -1) { Logger.log(`ERROR Crítico: Columna '${COL_USUARIO_LDAP}' no encontrada.`); return { headers: [], data: [] }; }
-    if (cierreColIndex0Based === -1) { Logger.log(`ERROR Crítico: Columna '${COL_CONTROL_CIERRE}' no encontrada.`); return { headers: [], data: [] }; }
-    if (interaccionColIndex0Based === -1) Logger.log(`Advertencia: Columna '${COL_INTERACCION}' no encontrada.`);
-    const processedDataRows = [];
-    for (let i = headerRowIndex; i < allDataValues.length; i++) {
-      const rowValues = allDataValues[i]; const rowDisplayValues = allDataDisplayValues[i];
-      if (rowValues && rowValues.length > cierreColIndex0Based && rowValues[cierreColIndex0Based] != null && String(rowValues[cierreColIndex0Based]).trim() !== '') { continue; }
-      if (!rowValues || rowValues.length <= ldapColIndex0Based || rowValues[ldapColIndex0Based] == null || String(rowValues[ldapColIndex0Based]).trim() !== searchLdap) { continue; }
-      const rowOutput = rowValues.map((cellValue, colIndex) => {
-        if (colIndex === fechaAsignacionColIndex0Based || colIndex === simpleDayColIndex0Based || colIndex === aperturaColIndex0Based) {
-           return (rowDisplayValues && rowDisplayValues.length > colIndex) ? rowDisplayValues[colIndex] : '';
-        } else { return formatCell(cellValue); }
-      });
-      processedDataRows.push(rowOutput);
-    }
-    return { headers: headers, data: processedDataRows };
-  } catch (e) { Logger.log(`Error fatal en getAssignments LDAP '${searchLdap}' Equipo '${searchTeam}': ${e.message}\nStack: ${e.stack}`); return { headers: [], data: [] }; }
+  // Definir el orden y las columnas esperadas
+  const columnasEsperadas = [
+    COL_FECHA_ASIGNACION,
+    COL_INTERACCION,
+    COL_CASO,
+    COL_SIMPLE_DAY,
+    "Oficina",
+    "Población",
+    COL_CANAL,
+    COL_PROCESO,
+    COL_TIPO_ACCION,
+    COL_USUARIO_LDAP,
+    COL_CONTROL_APERTURA,
+    COL_CONTROL_CIERRE,
+    COL_LINK,
+    COL_MARCA_EG,
+    COL_MARCA_CI
+  ];
+  const sheet = getSheetByTeam(searchTeam);
+  if (!sheet) {
+    Logger.log(`getAssignments: No se encontró la hoja para el equipo '${searchTeam}'.`);
+    return { headers: columnasEsperadas, data: [] };
+  }
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { headers: columnasEsperadas, data: [] };
+  const headers = data[0];
+  const ldapColIndex = headers.indexOf(COL_USUARIO_LDAP);
+  const simpleDayColIndex = headers.indexOf(COL_SIMPLE_DAY);
+  if (ldapColIndex === -1) return { headers: columnasEsperadas, data: [] };
+  // Filtrar filas por LDAP y Simple Day si corresponde
+  let filteredRows = data.slice(1).filter(row => String(row[ldapColIndex]).trim() === searchLdap);
+  if (simpleDayFilter && simpleDayColIndex !== -1) {
+    filteredRows = filteredRows.filter(row => String(row[simpleDayColIndex]).trim() === String(simpleDayFilter).trim());
+  }
+  // Mapear las filas a las columnas esperadas
+  const resultData = filteredRows.map(row => columnasEsperadas.map(col => {
+    const idx = headers.indexOf(col);
+    return idx !== -1 ? row[idx] : '';
+  }));
+  return { headers: columnasEsperadas, data: resultData };
 }
 
 // --- MODIFICADO: recordTimestamp para escribir SIEMPRE en cierre ---
@@ -435,7 +462,7 @@ function checkForQaUpdatesForUser(username) {
   } catch (e) { Logger.log(`Error Polling QA para ${username}: ${e.message}`); return []; }
 }
 
-function getMetricsData(ldap) {
+function getMetricsData(ldap, simpleDayFilter = null) {
   try {
     if (!ldap) {
       Logger.log("getMetricsData: LDAP no proporcionado");
@@ -466,7 +493,7 @@ function getMetricsData(ldap) {
           return;
         }
 
-        const fechaAsignacionColIndex = getColumnIndex(sheet, COL_FECHA_ASIGNACION);
+        const simpleDayColIndex = getColumnIndex(sheet, COL_SIMPLE_DAY);
         const marcaEGColIndex = getColumnIndex(sheet, COL_MARCA_EG);
         const marcaCIColIndex = getColumnIndex(sheet, COL_MARCA_CI);
 
@@ -485,13 +512,18 @@ function getMetricsData(ldap) {
             const rowLdap = String(row[ldapColIndex - 1]).trim().toLowerCase();
             
             if (rowLdap === searchLdap) {
+              // Verificar si el Simple Day coincide con el filtro
+              if (simpleDayFilter && simpleDayColIndex !== -1) {
+                const rowSimpleDay = String(row[simpleDayColIndex - 1]).trim();
+                if (rowSimpleDay !== simpleDayFilter) return;
+              }
+
               totalCasos++;
 
-              // Verificar si es caso de hoy
-              if (fechaAsignacionColIndex !== -1 && row[fechaAsignacionColIndex - 1]) {
-                const fechaAsignacion = new Date(row[fechaAsignacionColIndex - 1]);
-                fechaAsignacion.setHours(0, 0, 0, 0);
-                if (fechaAsignacion.getTime() === hoy.getTime()) {
+              // Verificar si es caso de hoy usando Simple Day
+              if (simpleDayColIndex !== -1 && row[simpleDayColIndex - 1]) {
+                const simpleDayDate = parseSimpleDayDate(String(row[simpleDayColIndex - 1]));
+                if (simpleDayDate && simpleDayDate.getTime() === hoy.getTime()) {
                   casosHoy++;
                 }
               }
@@ -527,6 +559,88 @@ function getMetricsData(ldap) {
 
   } catch (e) {
     Logger.log(`Error en getMetricsData: ${e.message}`);
+    return null;
+  }
+}
+
+function getUniqueSimpleDays(team, ldap) {
+  if (!team || !ldap) {
+    Logger.log("getUniqueSimpleDays: No se proporcionó el equipo o el LDAP");
+    return [];
+  }
+
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
+    const sheet = ss.getSheetByName(team);
+    
+    if (!sheet) {
+      Logger.log(`Hoja '${team}' no encontrada`);
+      return [];
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return []; // Solo encabezados o sin datos
+    
+    const headers = data[0];
+    const simpleDayColIndex = headers.findIndex(h => String(h).trim().toLowerCase() === COL_SIMPLE_DAY.toLowerCase());
+    const ldapColIndex = headers.findIndex(h => String(h).trim().toLowerCase() === COL_USUARIO_LDAP.toLowerCase());
+    
+    if (simpleDayColIndex === -1) {
+      Logger.log(`Columna '${COL_SIMPLE_DAY}' no encontrada en hoja '${team}`);
+      return [];
+    }
+    
+    if (ldapColIndex === -1) {
+      Logger.log(`Columna '${COL_USUARIO_LDAP}' no encontrada en hoja '${team}`);
+      return [];
+    }
+    
+    // Obtener valores únicos de la columna Simple Day solo para el LDAP seleccionado
+    const uniqueSimpleDays = new Set();
+    for (let i = 1; i < data.length; i++) {
+      const rowLdap = String(data[i][ldapColIndex]).trim().toLowerCase();
+      const simpleDay = data[i][simpleDayColIndex];
+      
+      // Filtrar el valor específico y asegurarse de que sea una fecha válida
+      if (rowLdap === String(ldap).trim().toLowerCase() && 
+          simpleDay && 
+          String(simpleDay).trim() !== "Sun May 18 2025 23:00:00 GMT-0500 (hora estándar de Colombia)" &&
+          parseSimpleDayDate(String(simpleDay).trim())) {
+        uniqueSimpleDays.add(String(simpleDay).trim());
+      }
+    }
+    
+    // Convertir a array y ordenar
+    return Array.from(uniqueSimpleDays).sort((a, b) => {
+      const dateA = parseSimpleDayDate(a);
+      const dateB = parseSimpleDayDate(b);
+      if (dateA && dateB) {
+        return dateB.getTime() - dateA.getTime(); // Orden descendente (más reciente primero)
+      }
+      return 0;
+    });
+  } catch (e) {
+    Logger.log(`Error en getUniqueSimpleDays: ${e.message}`);
+    return [];
+  }
+}
+
+function getSheetByTeam(team) {
+  if (!team || String(team).trim() === '') {
+    Logger.log('getSheetByTeam: Equipo no proporcionado');
+    return null;
+  }
+  
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
+    const sheet = ss.getSheetByName(String(team).trim());
+    if (!sheet) {
+      Logger.log(`getSheetByTeam: No se encontró la hoja para el equipo '${team}'`);
+      return null;
+    }
+    return sheet;
+  } catch (e) {
+    Logger.log(`Error en getSheetByTeam para equipo '${team}': ${e.message}`);
     return null;
   }
 }

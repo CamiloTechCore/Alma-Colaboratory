@@ -8,10 +8,14 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     .btn-confirm-gestion {
-  width: 150px; /*Aqui el ancho que se desee, por ejemplo 120px, 10em, etc. */
-  background-color: #17a2b8;
-  color: #fff;
-}
+      white-space: normal !important; /* Permite salto de línea */
+      font-size: 0.95em;              /* Reduce un poco el tamaño de fuente */
+      padding: 6px 10px;              /* Ajusta el padding si es necesario */
+      min-width: 120px;               /* Asegura un ancho mínimo */
+      word-break: break-word;         /* Permite cortar palabras largas */
+      max-width: 160px;               /* Limita el ancho máximo */
+      text-align: center;             /* Centra el texto */
+    }
     body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f0f2f5;margin:0;padding:0;display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
     #loginContainer{background:#fff;padding:40px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.15);width:90%;max-width:400px;margin-top:80px;text-align:center}
     #loginContainer h2{color:#1a237e;margin-bottom:30px;font-size:1.6em}
@@ -56,10 +60,43 @@
     select,input[type=text],input[type=number],input[type=datetime-local],textarea{width:100%;padding:10px 12px;border-radius:5px;border:1px solid #ced4da;font-size:1em;box-sizing:border-box;transition:border-color .2s ease,box-shadow .2s ease}
     input[readonly]{background-color:#e9ecef;cursor:not-allowed}
     select:focus,input:not([readonly]):focus,textarea:focus,input[type=number]:focus{border-color:#80bdff;outline:0;box-shadow:0 0 0 .2rem rgba(0,123,255,.25)}
-    .table-container{max-height:650px;overflow-y:auto;margin-top:20px;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,.07);width:100%;box-sizing:border-box}
+    .table-container {
+      max-width: 100vw;
+      overflow-x: auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #dataTable {
+      width: 100%;
+      min-width: 900px;
+      table-layout: auto;
+    }
+    @media (max-width: 1200px) {
+      #dataTable th, #dataTable td {
+        font-size: 0.95em;
+        padding: 8px 6px;
+      }
+    }
+    @media (max-width: 900px) {
+      #dataTable th, #dataTable td {
+        font-size: 0.9em;
+        padding: 6px 4px;
+      }
+      #dataTable {
+        min-width: 700px;
+      }
+    }
     table{width:100%;border-collapse:collapse;background:#fff}
-    #dataTable{table-layout:fixed;word-wrap:break-word}
-    #dataTable th,#dataTable td{border:1px solid #e9ecef;padding:10px 12px;text-align:left;font-size:.88em;vertical-align:middle;white-space:normal;overflow-wrap:break-word;overflow:hidden;text-overflow:ellipsis}
+    #dataTable th, #dataTable td {
+      padding: 12px 10px;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 1em;
+      white-space: normal;
+      word-break: break-word;
+      min-width: 90px;
+      max-width: 220px;
+    }
     #dataTable th:nth-child(1),#dataTable td:nth-child(1){width:4%;text-align:center}
     #dataTable th:nth-child(2),#dataTable td:nth-child(2){width:10%}
     #dataTable th:nth-child(3),#dataTable td:nth-child(3){width:10%}
@@ -206,6 +243,32 @@
         font-weight: 700;
         color: #1a237e;
     }
+    .actions-cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 180px;
+    }
+    .actions-cell button {
+      flex: 1 1 120px;
+      min-width: 100px;
+      max-width: 160px;
+      margin: 2px 0;
+      white-space: nowrap;
+    }
+    @media (max-width: 900px) {
+      .actions-cell {
+        flex-direction: column;
+        gap: 4px;
+        min-width: 120px;
+      }
+      .actions-cell button {
+        min-width: 90px;
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -279,6 +342,10 @@
             <div class="control-group">
               <label for="teamSelect"><i class="fas fa-users-cog icon"></i>Equipo:</label>
               <select id="teamSelect" onchange="handleAssignmentSelectionChange()" disabled> <option value="">Cargando...</option> </select>
+            </div>
+            <div class="control-group">
+              <label for="simpleDaySelect"><i class="fas fa-calendar-day icon"></i>Simple Day:</label>
+              <select id="simpleDaySelect" onchange="handleSimpleDayChange()" disabled> <option value="">Cargando...</option> </select>
             </div>
         </div>
         <div class="asignaciones-header-search-container">
@@ -395,7 +462,7 @@
       }).verificarUsuario(username);
     }
 
-    function loadMetricsData(ldap) {
+    function loadMetricsData(ldap, simpleDayFilter = null) {
       // Mostrar spinner en todas las métricas
       const metricIds = [
         'metric-total-casos',
@@ -416,14 +483,12 @@
       google.script.run
         .withSuccessHandler(function(metrics) {
           if (metrics) {
-            // Actualizar cada métrica con su valor correspondiente
             document.getElementById('metric-total-casos').textContent = metrics.totalCasos;
             document.getElementById('metric-casos-hoy').textContent = metrics.casosHoy;
             document.getElementById('metric-casos-pendientes').textContent = metrics.casosPendientes;
             document.getElementById('metric-errores-gestion').textContent = metrics.erroresGestion;
             document.getElementById('metric-conductas-inadecuadas').textContent = metrics.conductasInadecuadas;
           } else {
-            // Si hay error, mostrar mensaje en las métricas
             metricIds.forEach(id => {
               const element = document.getElementById(id);
               if (element) {
@@ -433,7 +498,6 @@
           }
         })
         .withFailureHandler(function(error) {
-          // En caso de error, mostrar mensaje en las métricas
           metricIds.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -442,7 +506,7 @@
           });
           console.error('Error al cargar métricas:', error);
         })
-        .getMetricsData(ldap);
+        .getMetricsData(ldap, simpleDayFilter);
     }
 
     function openTab(evt, tabName) {
@@ -518,7 +582,7 @@
         if (matchDateTime) { try { let day = parseInt(matchDateTime[1], 10); let month = parseInt(matchDateTime[2], 10) - 1; let year = parseInt(matchDateTime[3], 10); let hour = parseInt(matchDateTime[4], 10); let minute = parseInt(matchDateTime[5], 10); let second = parseInt(matchDateTime[6], 10); let ampm = matchDateTime[7].toUpperCase(); if (ampm === 'PM' && hour < 12) hour += 12; if (ampm === 'AM' && hour === 12) hour = 0; date = new Date(Date.UTC(year, month, day, hour, minute, second)); if (isNaN(date.getTime())) date = null; } catch (e) { date = null; } } }
         if (!date) { try { let tempDate = new Date(dateString); if (!isNaN(tempDate.getTime())) date = tempDate; } catch(e) {} } return date;
     }
-    function loadAssignments(ldap, team) {
+    function loadAssignments(ldap, team, simpleDayFilter = null) {
         const table = document.getElementById("dataTable"); const tableHead = table.querySelector("thead"); const tableBody = table.querySelector("tbody");
         const ldapSelect = document.getElementById("ldapSelect"); const teamSelect = document.getElementById("teamSelect"); const searchInput = document.getElementById("asignacionesSearchInput");
         if (searchInput) searchInput.value = '';
@@ -555,7 +619,26 @@
                              const row = item.rowData; const isOverdue = item.isOverdue; const aperturaTimestamp = item.aperturaTimestamp; const caseNumber = item.caseNumber; const interactionId = item.interactionId; const isRepeated = caseNumber && caseCounts[caseNumber] > 1;
                              if (!Array.isArray(row) || row.length !== allHeaders.length) { console.warn(`Fila ${index+1} inválida`); return `<tr><td colspan="${numVisibleColumns}">Error fila ${index+1}</td></tr>`; }
                              const rowId = `assignment-row-${caseNumber}-${interactionId}-${index}`; const rowClass = isOverdue ? 'overdue-case' : ''; let rowHtml = `<tr id="${rowId}" class="${rowClass}"><td>${index + 1}</td>`;
-                             visibleHeadersData.forEach(({ originalIndex, header }, visibleIndex) => { let cellContent = (row.length > originalIndex && row[originalIndex] != null) ? String(row[originalIndex]) : ''; let tdClass = ''; const currentVisibleCellIndex = visibleIndex + 1; if (isRepeated && (currentVisibleCellIndex === visibleCaseIndex || currentVisibleCellIndex === visibleInteractionIndex)) { tdClass += ' repeated-case-highlight'; } if (originalIndex === linkColIndexOriginal && typeof cellContent === 'string' && (cellContent.startsWith("http://") || cellContent.startsWith("https://"))) { const safeUrl = cellContent.replace(/"/g, '&quot;'); let linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="Abrir Enlace" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">Enlace</a>`; if (aperturaTimestamp) { const safeTimestamp = String(aperturaTimestamp).replace(/"/g, '&quot;'); linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="Abrir Enlace" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">Enlace<i class="fas fa-eye" title="Abierto: ${safeTimestamp}"></i></a>`; } cellContent = linkInnerHtml; tdClass += ' text-center'; } rowHtml += `<td class="${tdClass.trim()}">${cellContent}</td>`; });
+                             visibleHeadersData.forEach(({ originalIndex, header }, visibleIndex) => {
+                                let cellContent = (row.length > originalIndex && row[originalIndex] != null) ? String(row[originalIndex]) : '';
+                                let tdClass = '';
+                                const currentVisibleCellIndex = visibleIndex + 1;
+                                if (isRepeated && (currentVisibleCellIndex === visibleCaseIndex || currentVisibleCellIndex === visibleInteractionIndex)) {
+                                    tdClass += ' repeated-case-highlight';
+                                }
+                                if (originalIndex === linkColIndexOriginal && typeof cellContent === 'string' && (cellContent.startsWith("http://") || cellContent.startsWith("https://"))) {
+                                    const safeUrl = cellContent.replace(/"/g, '&quot;');
+                                    let linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="Abrir Enlace" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">Enlace`;
+                                    if (aperturaTimestamp) {
+                                        const safeTimestamp = String(aperturaTimestamp).replace(/"/g, '&quot;');
+                                        linkInnerHtml += `<i class="fas fa-eye" title="Abierto: ${safeTimestamp}"></i>`;
+                                    }
+                                    linkInnerHtml += `</a>`;
+                                    cellContent = linkInnerHtml;
+                                    tdClass += ' text-center';
+                                }
+                                rowHtml += `<td class="${tdClass.trim()}">${cellContent}</td>`;
+                            });
                              const safeRowId = rowId.replace(/'/g, "\\'"); const safeTeam = team.replace(/'/g, "\\'"); const safeLdap = ldap.replace(/'/g, "\\'"); const safeCaseNumber = String(caseNumber).replace(/'/g, "\\'"); const safeInteractionId = String(interactionId).replace(/'/g, "\\'");
                              rowHtml += `<td class="actions-cell"><button class="btn-action" onclick="finalizarCaso('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-check-circle icon"></i>Finalizar</button><button class="btn-confirm-gestion" onclick="abrirModalConfirmacionGestion('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-marker icon"></i>Confirma tu Gestión</button></td>`; rowHtml += `</tr>`; return rowHtml;
                          }).join(''); filterAsignacionesTable(''); if (searchInput) searchInput.disabled = false;
@@ -727,6 +810,7 @@
     function initializeDashboard() {
         console.log("Inicializando:", currentUser.rol);
         if (!currentUser) return;
+        
         const esAdmin = currentUser.rol === 'Administrador';
         const esQA = currentUser.rol === 'QA';
         const esQS = currentUser.rol === 'QS';
@@ -737,12 +821,24 @@
         document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c=>{c.style.display='none';c.classList.remove('active');});
         document.getElementById('qaFormContainer').style.display='none';
+        
         const asignBtn=document.querySelector('.tab-button[data-tab-target="asignaciones"]');
         const qaBtn=document.querySelector('.tab-button[data-tab-target="qa"]');
+        
         if(esAdmin||esQA){
-            if(document.getElementById("ldapSelect"))loadDropdown("getLDAPUsers","ldapSelect","Seleccione LDAP");
-            if(document.getElementById("teamSelect"))loadDropdown("getTeams","teamSelect","Seleccione Equipo");
+            if(document.getElementById("teamSelect")) {
+                loadDropdown("getTeams", "teamSelect", "Seleccione Equipo");
+                // Agregar event listener para el cambio de equipo
+                document.getElementById("teamSelect").addEventListener('change', handleTeamChange);
+            }
+            if(document.getElementById("ldapSelect")) {
+                document.getElementById("ldapSelect").addEventListener('change', handleLdapChange);
+            }
+            if(document.getElementById("simpleDaySelect")) {
+                document.getElementById("simpleDaySelect").addEventListener('change', handleSimpleDayChange);
+            }
         }
+        
         let defTab='asignaciones';
         let defBtn=asignBtn;
         if(esQS){defTab='qa';defBtn=qaBtn;}
@@ -809,6 +905,121 @@
         }
     }
     document.addEventListener("DOMContentLoaded", function() { console.log("DOM cargado."); document.getElementById('loginContainer').style.display = 'block'; document.getElementById('dashboardContainer').style.display = 'none'; const usernameInput = document.getElementById('usernameInput'); if(usernameInput) { usernameInput.addEventListener('keypress', function(event) { if (event.key === 'Enter') { event.preventDefault(); handleLogin(); } }); usernameInput.focus(); } const toggleButton = document.getElementById('toggleQaFormButton'); const closeButton = document.getElementById('closeQaForm'); const qaFormContainer = document.getElementById('qaFormContainer'); if (toggleButton && qaFormContainer) { toggleButton.addEventListener('click', () => { if (qaFormContainer.style.display === 'none') { qaFormContainer.style.display = 'block'; qaFormContainer.scrollIntoView({ behavior: 'smooth'}); } }); } if (closeButton && qaFormContainer) { closeButton.addEventListener('click', () => { qaFormContainer.style.display = 'none'; limpiarFormularioQA(); }); } const qaSearchInput = document.getElementById('qaSearchInput'); if (qaSearchInput) { qaSearchInput.addEventListener('input', function() { filterAndDisplayQaData(this.value); }); } const asignacionesSearchInput = document.getElementById('asignacionesSearchInput'); if (asignacionesSearchInput) { asignacionesSearchInput.addEventListener('input', function() { filterAsignacionesTable(this.value); }); } });
+
+    function loadSimpleDayDropdown() {
+        const select = document.getElementById('simpleDaySelect');
+        const teamSelect = document.getElementById('teamSelect');
+        const ldapSelect = document.getElementById('ldapSelect');
+        
+        if (!select || !teamSelect || !ldapSelect) return;
+        
+        select.innerHTML = '<option value="">Cargando...</option>';
+        select.disabled = true;
+        
+        const selectedTeam = teamSelect.value;
+        const selectedLdap = ldapSelect.value;
+        
+        if (!selectedTeam || !selectedLdap) {
+            select.innerHTML = '<option value="">Seleccione equipo y usuario primero</option>';
+            select.disabled = true;
+            return;
+        }
+        
+        google.script.run
+            .withSuccessHandler(data => {
+                if (data && Array.isArray(data) && data.length > 0) {
+                    select.innerHTML = '<option value="">Todos los Simple Day</option>' + 
+                        data.map(day => `<option value="${day}">${day}</option>`).join('');
+                } else {
+                    select.innerHTML = '<option value="">No hay Simple Days disponibles</option>';
+                }
+                select.disabled = false;
+            })
+            .withFailureHandler(error => {
+                console.error('Error cargando Simple Days:', error);
+                select.innerHTML = '<option value="">Error al cargar</option>';
+                select.disabled = false;
+            })
+            .getUniqueSimpleDays(selectedTeam, selectedLdap);
+    }
+
+    function handleSimpleDayChange() {
+        const simpleDaySelect = document.getElementById('simpleDaySelect');
+        const ldapSelect = document.getElementById('ldapSelect');
+        const teamSelect = document.getElementById('teamSelect');
+        
+        if (!simpleDaySelect || !ldapSelect || !teamSelect) return;
+        
+        const selectedSimpleDay = simpleDaySelect.value;
+        const selectedLdap = ldapSelect.value;
+        const selectedTeam = teamSelect.value;
+        
+        // Actualizar métricas con el filtro de Simple Day
+        if (selectedLdap) {
+            loadMetricsData(selectedLdap, selectedSimpleDay);
+        }
+        
+        // Actualizar tabla si hay selección de LDAP y equipo
+        if (selectedLdap && selectedTeam) {
+            loadAssignments(selectedLdap, selectedTeam, selectedSimpleDay);
+        }
+    }
+
+    function handleTeamChange() {
+        const teamSelect = document.getElementById("teamSelect");
+        const ldapSelect = document.getElementById("ldapSelect");
+        const simpleDaySelect = document.getElementById("simpleDaySelect");
+        
+        // Limpiar y deshabilitar los otros selects
+        if (ldapSelect) {
+            ldapSelect.innerHTML = '<option value="">Seleccione usuario LDAP</option>';
+            ldapSelect.disabled = true;
+        }
+        if (simpleDaySelect) {
+            simpleDaySelect.innerHTML = '<option value="">Seleccione usuario primero</option>';
+            simpleDaySelect.disabled = true;
+        }
+        
+        // Limpiar la tabla
+        const body = document.getElementById("dataTableBody");
+        const header = document.querySelector("#dataTable thead");
+        if (body) {
+            let colspan = header?.rows[0]?.cells.length || 13;
+            body.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Seleccione usuario y equipo.</td></tr>`;
+        }
+        if (header) header.innerHTML = '';
+        
+        // Si hay equipo seleccionado, cargar usuarios
+        if (teamSelect && teamSelect.value) {
+            loadDropdown("getLDAPUsers", "ldapSelect", "Seleccione usuario LDAP");
+        }
+    }
+
+    function handleLdapChange() {
+        const ldapSelect = document.getElementById("ldapSelect");
+        const teamSelect = document.getElementById("teamSelect");
+        const simpleDaySelect = document.getElementById("simpleDaySelect");
+        
+        // Limpiar y deshabilitar Simple Day
+        if (simpleDaySelect) {
+            simpleDaySelect.innerHTML = '<option value="">Cargando Simple Days...</option>';
+            simpleDaySelect.disabled = true;
+        }
+        
+        // Limpiar la tabla
+        const body = document.getElementById("dataTableBody");
+        const header = document.querySelector("#dataTable thead");
+        if (body) {
+            let colspan = header?.rows[0]?.cells.length || 13;
+            body.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Seleccione usuario y equipo.</td></tr>`;
+        }
+        if (header) header.innerHTML = '';
+        
+        // Si hay LDAP y equipo seleccionados, cargar Simple Days
+        if (ldapSelect && ldapSelect.value && teamSelect && teamSelect.value) {
+            loadSimpleDayDropdown();
+        }
+    }
   </script>
 </body>
 </html>
