@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Operativo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .btn-confirm-gestion {
+  width: 150px; /*Aqui el ancho que se desee, por ejemplo 120px, 10em, etc. */
+  background-color: #17a2b8;
+  color: #fff;
+}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f0f2f5;margin:0;padding:0;display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
+    #loginContainer{background:#fff;padding:40px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.15);width:90%;max-width:400px;margin-top:80px;text-align:center}
+    #loginContainer h2{color:#1a237e;margin-bottom:30px;font-size:1.6em}
+    #loginContainer .control-group{margin-bottom:20px;text-align:left}
+    #loginContainer label{display:block;margin-bottom:8px;font-weight:700;color:#343a40;font-size:.95em;display:flex;align-items:center;gap:6px}
+    #loginContainer input[type=text]{width:100%;padding:12px 15px;border-radius:5px;border:1px solid #ced4da;font-size:1em;box-sizing:border-box;transition:border-color .2s ease,box-shadow .2s ease}
+    #loginContainer input[type=text]:focus{border-color:#80bdff;outline:0;box-shadow:0 0 0 .2rem rgba(0,123,255,.25)}
+    #loginContainer button{width:100%;padding:12px 15px;font-size:1.1em}
+    .dashboard-container{background:#fff;padding:25px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);width:95%;max-width:1800px;margin-top:20px;margin-bottom:20px;display:none}
+    .role-administrador{} .role-qa{} .role-qs{}
+    .dashboard-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #eee;flex-wrap:wrap;gap:15px}
+    .dashboard-header h2{color:#1a237e;margin-bottom:0;font-size:1.8em;text-align:left;flex-grow:1}
+    #userInfo{font-size:.95em;color:#555;background-color:#e9ecef;padding:8px 15px;border-radius:5px;text-align:right;white-space:nowrap}
+    #userInfo .icon{margin-right:6px;color:#007bff}
+    .header-actions{display:flex;align-items:center;gap:15px}
+    .btn-refresh{background-color:#6c757d;color:#fff;padding:5px 10px;font-size:.9em;line-height:1.2;border-radius:50%;width:32px;height:32px;display:inline-flex;justify-content:center;align-items:center}
+    .btn-refresh:hover:not(:disabled){background-color:#5a6268;box-shadow:0 2px 5px rgba(0,0,0,.1)}
+    .btn-refresh .icon{margin-right:0}
+    .btn-refresh.loading .fa-sync-alt{animation:fa-spin 1.5s infinite linear}
+    h3{color:#333;margin-top:20px;margin-bottom:15px;border-bottom:1px solid #eee;padding-bottom:8px;display:flex;align-items:center;font-size:1.4em}
+    h3 .icon{margin-right:10px;color:#007bff}
+    .tab-container{display:flex;border-bottom:2px solid #dee2e6;margin-bottom:25px;flex-wrap:wrap}
+    .tab-button{padding:12px 25px;cursor:pointer;border:none;background-color:transparent;font-size:1.1em;font-weight:600;color:#495057;border-bottom:3px solid transparent;transition:all .3s ease;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+    .tab-button:hover{background-color:#e9ecef;color:#0d47a1}
+    .tab-button.active{color:#1a237e;border-bottom:3px solid #1a237e}
+    .tab-content{display:none;padding:15px 0;animation:fadeIn .5s ease-in-out}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .tab-content.active{display:block}
+    .role-qs .tab-button[data-tab-target=asignaciones],.role-qs #asignaciones{display:none!important}
+    .role-qs #toggleQaFormButton,.role-qs #qaFormContainer{display:none!important}
+    #toggleQaFormButton{display:inline-block;padding:10px 20px;margin-bottom:15px;background-color:#e9ecef;color:#1a237e;border:1px solid #ced4da;border-radius:5px;cursor:pointer;transition:background-color .3s ease,box-shadow .3s ease;font-weight:600;font-size:1.05em}
+    #toggleQaFormButton .icon{margin-right:8px}
+    #toggleQaFormButton:hover{background-color:#dee2e6;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+    #qaFormContainer{display:none;margin-bottom:25px}
+    #qaForm{background:#f8f9fa;padding:30px;border-radius:8px;box-shadow:inset 0 1px 4px rgba(0,0,0,.06);max-width:800px;margin:0 auto;text-align:left;border:1px solid #e0e0e0;position:relative;padding-top:40px}
+    #closeQaForm{position:absolute;top:10px;right:15px;font-size:2em;color:#6c757d;cursor:pointer;line-height:1;transition:color .2s ease;font-weight:700}
+    #closeQaForm:hover{color:#343a40}
+    .controls-container{display:flex;gap:20px;margin-bottom:25px;flex-wrap:wrap;background:#f8f9fa;padding:20px;border-radius:8px;border:1px solid #e9ecef}
+    .control-group{flex:1;min-width:220px}
+    label{display:block;margin-bottom:8px;font-weight:700;color:#343a40;font-size:.95em;display:flex;align-items:center;gap:6px}
+    label .icon{color:#555}
+    select,input[type=text],input[type=number],input[type=datetime-local],textarea{width:100%;padding:10px 12px;border-radius:5px;border:1px solid #ced4da;font-size:1em;box-sizing:border-box;transition:border-color .2s ease,box-shadow .2s ease}
+    input[readonly]{background-color:#e9ecef;cursor:not-allowed}
+    select:focus,input:not([readonly]):focus,textarea:focus,input[type=number]:focus{border-color:#80bdff;outline:0;box-shadow:0 0 0 .2rem rgba(0,123,255,.25)}
+    .table-container{max-height:650px;overflow-y:auto;margin-top:20px;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,.07);width:100%;box-sizing:border-box}
+    table{width:100%;border-collapse:collapse;background:#fff}
+    #dataTable{table-layout:fixed;word-wrap:break-word}
+    #dataTable th,#dataTable td{border:1px solid #e9ecef;padding:10px 12px;text-align:left;font-size:.88em;vertical-align:middle;white-space:normal;overflow-wrap:break-word;overflow:hidden;text-overflow:ellipsis}
+    #dataTable th:nth-child(1),#dataTable td:nth-child(1){width:4%;text-align:center}
+    #dataTable th:nth-child(2),#dataTable td:nth-child(2){width:10%}
+    #dataTable th:nth-child(3),#dataTable td:nth-child(3){width:10%}
+    #dataTable th:nth-child(4),#dataTable td:nth-child(4){width:9%}
+    #dataTable th:nth-child(5),#dataTable td:nth-child(5){width:9%}
+    #dataTable th:nth-child(6),#dataTable td:nth-child(6){width:9%}
+    #dataTable th:nth-child(7),#dataTable td:nth-child(7){width:9%}
+    #dataTable th:nth-child(8),#dataTable td:nth-child(8){width:9%}
+    #dataTable th:nth-child(9),#dataTable td:nth-child(9){width:9%}
+    #dataTable th:nth-child(10),#dataTable td:nth-child(10){width:9%}
+    #dataTable th:nth-child(11),#dataTable td:nth-child(11){width:9%}
+    #dataTable th:nth-child(12),#dataTable td:nth-child(12){width:6%;text-align:center}
+    #dataTable th:nth-child(13),#dataTable td:nth-child(13){width:22%;text-align:center}
+    #dataTable td a{color:#007bff;text-decoration:none;cursor:pointer;display:inline-block;padding:2px 5px}
+    #dataTable td a:hover{text-decoration:underline;color:#0056b3}
+    #dataTable td a .fa-eye{color:green;margin-left:5px}
+    #dataTable .actions-cell{text-align:center;white-space:nowrap;overflow:visible}
+    #dataTable .actions-cell button{margin:0 3px;padding:6px 10px;font-size:.85em}
+    .repeated-case-highlight{background-color:rgba(151,213,82,.8)!important}
+    #tablaRegistros{table-layout:fixed;word-wrap:break-word}
+    #tablaRegistros th,#tablaRegistros td{border:1px solid #e9ecef;padding:10px 12px;text-align:left;font-size:.88em;vertical-align:middle;white-space:normal;overflow-wrap:break-word}
+    #tablaRegistros th:nth-child(1){width:12%}
+    #tablaRegistros th:nth-child(2){width:8%}
+    #tablaRegistros th:nth-child(3){width:7%}
+    #tablaRegistros th:nth-child(4){width:7%}
+    #tablaRegistros th:nth-child(5){width:9%}
+    #tablaRegistros th:nth-child(6){width:17%}
+    #tablaRegistros th:nth-child(7){width:10%}
+    #tablaRegistros th:nth-child(8){width:12%}
+    #tablaRegistros th:nth-child(9){width:17%}
+    #tablaRegistros th:nth-child(10){width:5%;text-align:center}
+    #tablaRegistros th:nth-child(11){width:5%;text-align:center}
+    #tablaRegistros th.qa-actions-col{width:8%;text-align:center}
+    #tablaRegistros td.qa-actions-col{text-align:center}
+    #tablaRegistros td:nth-child(10),#tablaRegistros td:nth-child(11){text-align:center}
+    .qa-header-search-container{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:15px}
+    .qa-header-search-container h3{margin:0;border-bottom:none;padding-bottom:0;flex-grow:1}
+    #qaSearchInput{padding:8px 12px;border:1px solid #ced4da;border-radius:5px;font-size:.95em;width:100%;max-width:350px;box-sizing:border-box}
+    #qaSearchInput:focus{border-color:#80bdff;outline:0;box-shadow:0 0 0 .2rem rgba(0,123,255,.25)}
+    .asignaciones-header-search-container{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:15px}
+    .asignaciones-header-search-container h3{margin:0;border-bottom:none;padding-bottom:0;flex-grow:1}
+    #asignacionesSearchInput{padding:8px 12px;border:1px solid #ced4da;border-radius:5px;font-size:.95em;width:100%;max-width:400px;box-sizing:border-box}
+    #asignacionesSearchInput:focus{border-color:#80bdff;outline:0;box-shadow:0 0 0 .2rem rgba(0,123,255,.25)}
+    #dataTable tr.overdue-case{background-color:#f8d7da!important;font-weight:700}
+    #dataTable tr.overdue-case:hover{background-color:#f1c6cb!important}
+    #dataTable tr.overdue-case:nth-child(even){background-color:#f8d7da!important}
+    #tablaRegistros th.qa-actions-col,#tablaRegistros td.qa-actions-col{display:none}
+    .role-administrador #tablaRegistros th.qa-actions-col,.role-administrador #tablaRegistros td.qa-actions-col,.role-qs #tablaRegistros th.qa-actions-col,.role-qs #tablaRegistros td.qa-actions-col{display:table-cell}
+    .pagination-controls{display:flex;justify-content:center;align-items:center;padding:15px 0;margin-top:10px}
+    .pagination-controls button{background-color:#f0f2f5;border:1px solid #ced4da;color:#007bff;padding:8px 12px;margin:0 3px;cursor:pointer;transition:background-color .2s ease,color .2s ease;border-radius:4px;font-size:.9em;min-width:35px;height:35px;line-height:1}
+    .pagination-controls button:hover:not(:disabled){background-color:#e2e6ea;border-color:#adb5bd}
+    .pagination-controls button:disabled{color:#6c757d;cursor:not-allowed;opacity:.6;background-color:#e9ecef}
+    .pagination-controls button.active{background-color:#007bff;color:#fff;border-color:#007bff;font-weight:700;cursor:default}
+    .pagination-info{margin:0 15px;font-size:.9em;color:#555}
+    th{color:#fff;position:sticky;top:0;z-index:1;font-weight:600;vertical-align:middle}
+    #dataTable th{background:#007bff}
+    #tablaRegistros th{background:#009ee3}
+    tr:nth-child(even){background-color:#f8f9fa}
+    tr:hover{background-color:#e2e6ea}
+    button{padding:8px 15px;border:none;border-radius:5px;cursor:pointer;font-size:.9em;font-weight:500;transition:background-color .2s ease,box-shadow .2s ease;display:inline-flex;align-items:center;gap:6px;vertical-align:middle;justify-content:center;line-height:1.5}
+    button:disabled{background-color:#ccc!important;color:#666!important;cursor:not-allowed!important;box-shadow:none!important;opacity:.7}
+    button.btn-primary{background-color:#007bff;color:#fff} button.btn-primary:hover:not(:disabled){background-color:#0056b3}
+    button.btn-secondary{background-color:#6c757d;color:#fff} button.btn-secondary:hover:not(:disabled){background-color:#5a6268}
+    button.btn-action{background-color:#ffc107;color:#333} button.btn-action:hover:not(:disabled){background-color:#e0a800}
+    button.btn-confirm-gestion{background-color:#17a2b8;color:#fff} button.btn-confirm-gestion:hover:not(:disabled){background-color:#138496}
+    button.btn-add{background-color:#17a2b8;color:#fff} button.btn-add:hover:not(:disabled){background-color:#138496}
+    button.btn-edit{background-color:#ffc107;color:#333} button.btn-edit:hover:not(:disabled){background-color:#e0a800}
+    button.btn-delete{background-color:#dc3545;color:#fff} button.btn-delete:hover:not(:disabled){background-color:#c82333}
+    .loading,.no-data,.no-search-results td{text-align:center;padding:40px;font-style:italic;color:#6c757d;font-size:1.1em}
+    .loading{display:none}
+    .loading i{margin-right:10px;font-size:1.2em;animation:fa-spin 2s infinite linear}
+    .icon{margin-right:8px}
+    #qaForm .control-group{margin-bottom:18px} #qaForm label{font-size:.9em}
+    #qaForm input,#qaForm select,#qaForm textarea{width:100%;box-sizing:border-box}
+    #qaForm button.btn-primary{margin-top:15px;width:100%;padding:12px 18px;font-size:1em}
+    .swal2-popup{font-size:1rem!important;border-radius:8px!important;max-width:750px}
+    .swal2-title{font-size:1.4rem!important}
+    .swal2-html-container{text-align:left!important;margin:20px!important;font-size:1rem!important;line-height:1.6}
+    .swal2-html-container ul{padding-left:25px;margin-top:15px;margin-bottom:15px;list-style:none}
+    .swal2-html-container li{margin-bottom:8px;display:flex;align-items:center}
+    .swal2-html-container input[type=checkbox]{margin-right:10px;cursor:pointer;transform:scale(1.1)}
+    .swal2-html-container label{margin-bottom:0;font-weight:400;cursor:pointer}
+    .swal2-confirm,.swal2-cancel{font-size:.95rem!important;padding:10px 20px!important;margin:5px}
+    .swal-label{display:block;margin-bottom:5px;font-weight:700;color:#555}
+    .swal-input,.swal-select{width:100%!important;padding:10px;margin-bottom:15px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;font-size:1.3em}
+    textarea.swal-input{min-height:80px;resize:vertical}
+    .swal-qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:15px}
+    .swal-notify-check{margin-top:20px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .swal-notify-check input[type=checkbox]{margin:0;width:auto;flex-shrink:0;cursor:pointer}
+    .swal-notify-check label{margin:0;font-weight:400;color:#333;cursor:pointer}
+    .text-center{text-align:center}
+    .swal-gestion-subtitle{font-weight:700;margin-top:20px;margin-bottom:10px;color:#1a237e;border-bottom:1px solid #eee;padding-bottom:5px}
+    .swal-gestion-list{padding-left:0;margin-top:5px}
+    .swal-gestion-list li{margin-bottom:12px}
+    .ci-tl-group label{display:inline-block;margin-right:15px}
+    .ci-tl-group input[type=checkbox]{margin-right:5px}
+    .metrics-cards-container {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin: 20px 0;
+        flex-wrap: wrap;
+        padding: 0 15px;
+    }
+
+    .metric-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        min-width: 200px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .metric-card .icon {
+        font-size: 2em;
+        color: #007bff;
+        width: 40px;
+        text-align: center;
+    }
+
+    .metric-content {
+        flex: 1;
+    }
+
+    .metric-content h3 {
+        margin: 0;
+        font-size: 0.9em;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .metric-value {
+        margin: 5px 0 0;
+        font-size: 1.8em;
+        font-weight: 700;
+        color: #1a237e;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginContainer">
+    <h2><i class="fas fa-sign-in-alt icon"></i>Ingreso</h2>
+    <div class="control-group">
+      <label for="usernameInput"><i class="fas fa-user icon"></i>Usuario:</label>
+      <input type="text" id="usernameInput" placeholder="Ingrese su usuario" required>
+    </div>
+    <button id="loginButton" class="btn-primary" onclick="handleLogin()">
+      <i class="fas fa-arrow-right icon"></i>Ingresar
+    </button>
+  </div>
+  <div id="dashboardContainer" class="dashboard-container">
+     <div class="dashboard-header">
+        <h2><i class="fas fa-tachometer-alt icon"></i>Bienvenid@s a ALMA™ - Sistema de Gestión y Control</h2>
+        <div class="header-actions">
+           <div id="userInfo"> <i class="fas fa-user-circle icon"></i>Cargando... </div>
+           <button id="refreshButton" class="btn-refresh" onclick="refreshCurrentTabData()" title="Actualizar datos pestaña actual"> <i class="fas fa-sync-alt icon"></i> </button>
+         </div>
+       </div>
+     <div class="metrics-cards-container">
+        <div class="metric-card" id="metric-card-total">
+            <i class="fas fa-tasks icon"></i>
+            <div class="metric-content">
+                <h3>Total Casos Asignados</h3>
+                <p class="metric-value" id="metric-total-casos">0</p>
+            </div>
+        </div>
+        <div class="metric-card" id="metric-card-hoy">
+            <i class="fas fa-calendar-day icon"></i>
+            <div class="metric-content">
+                <h3>Casos Asignados Hoy</h3>
+                <p class="metric-value" id="metric-casos-hoy">0</p>
+            </div>
+        </div>
+        <div class="metric-card" id="metric-card-pendientes">
+            <i class="fas fa-clock icon"></i>
+            <div class="metric-content">
+                <h3>Casos Pendientes</h3>
+                <p class="metric-value" id="metric-casos-pendientes">0</p>
+            </div>
+        </div>
+        <div class="metric-card" id="metric-card-eg">
+            <i class="fas fa-exclamation-triangle icon"></i>
+            <div class="metric-content">
+                <h3>Errores de Gestión</h3>
+                <p class="metric-value" id="metric-errores-gestion">0</p>
+            </div>
+        </div>
+        <div class="metric-card" id="metric-card-ci">
+            <i class="fas fa-user-slash icon"></i>
+            <div class="metric-content">
+                <h3>Conductas Inadecuadas</h3>
+                <p class="metric-value" id="metric-conductas-inadecuadas">0</p>
+            </div>
+        </div>
+     </div>
+    <div class="tab-container">
+       <button class="tab-button" data-tab-target="asignaciones" onclick="openTab(event, 'asignaciones')"><i class="fas fa-tasks icon"></i>Gestión Asignaciones</button>
+       <button class="tab-button" data-tab-target="qa" onclick="openTab(event, 'qa')"><i class="fas fa-clipboard-check icon"></i>Seguimiento QA</button>
+     </div>
+     <div id="loading" class="loading" style="display: none; justify-content: center; align-items: center; padding: 30px;"> <i class="fas fa-spinner fa-spin"></i>Cargando datos... </div>
+    <div id="asignaciones" class="tab-content">
+        <h3><i class="fas fa-filter icon"></i>Filtrar Asignaciones</h3>
+        <div class="controls-container">
+            <div class="control-group">
+              <label for="ldapSelect"><i class="fas fa-user icon"></i>Usuario LDAP:</label>
+              <select id="ldapSelect" onchange="handleAssignmentSelectionChange()" disabled> <option value="">Cargando...</option> </select>
+            </div>
+            <div class="control-group">
+              <label for="teamSelect"><i class="fas fa-users-cog icon"></i>Equipo:</label>
+              <select id="teamSelect" onchange="handleAssignmentSelectionChange()" disabled> <option value="">Cargando...</option> </select>
+            </div>
+        </div>
+        <div class="asignaciones-header-search-container">
+            <h3><i class="fas fa-list-ul icon"></i>Casos Asignados</h3> <input type="text" id="asignacionesSearchInput" placeholder="Buscar por #Caso, Fecha, Simple Day, Canal..." disabled>
+        </div>
+        <div class="table-container">
+            <table id="dataTable">
+              <thead> </thead>
+              <tbody id="dataTableBody"> <tr><td colspan="13" class="no-data">Seleccione usuario y equipo para ver asignaciones.</td></tr> </tbody>
+             </table>
+         </div>
+    </div>
+    <div id="qa" class="tab-content">
+        <div id="toggleQaFormButton" class="qa-form-toggle"> <i class="fas fa-plus-circle icon"></i>Registrar Nueva Consulta QA </div>
+        <div id="qaFormContainer">
+         <form id="qaForm">
+             <span id="closeQaForm" class="close-qa-form" title="Cerrar formulario">&times;</span>
+             <h3><i class="fas fa-edit icon"></i>Registrar Nueva Consulta QA</h3>
+             <div class="control-group"> <label for="qaLdapQa"><i class="fas fa-user-secret icon"></i>LDAP QA (Registra):</label> <input type="text" id="qaLdapQa" required readonly> </div>
+             <div class="control-group"> <label for="qaTeam"><i class="fas fa-users icon"></i>TEAM (Caso):</label> <input type="text" id="qaTeam" required> </div>
+             <div class="control-group"> <label for="qaCaso"><i class="fas fa-hashtag icon"></i># CASO:</label> <input type="text" id="qaCaso" required> </div>
+             <div class="control-group"> <label for="qaRepEvaluar"><i class="fas fa-user-check icon"></i>REP A EVALUAR:</label> <input type="text" id="qaRepEvaluar" required> </div>
+             <div class="control-group"> <label for="qaPregunta"><i class="fas fa-question-circle icon"></i>PREGUNTA:</label> <textarea id="qaPregunta" rows="3" class="swal-input" required></textarea> </div>
+             <button type="button" class="btn-primary" onclick="guardarRegistroQA()"> <i class="fas fa-save icon"></i>Guardar Nuevo Registro </button>
+         </form>
+        </div>
+        <div class="qa-header-search-container">
+          <h3><i class="fas fa-list-alt icon"></i>Registros Guardados QA</h3>
+          <input type="text" id="qaSearchInput" placeholder="Buscar por Fecha, LDAP QA, # CASO...">
+        </div>
+        <div class="table-container">
+          <table id="tablaRegistros">
+           <thead> <tr> <th>FECHA REGISTRO</th> <th>LDAP QA</th> <th>TEAM</th> <th># CASO</th> <th>REP A EVALUAR</th> <th class="wrap">PREGUNTA</th> <th class="wrap">ESTADO</th> <th>FECHA DE RESPUESTA</th> <th class="wrap">RESPUESTA</th> <th class="text-center">VISTO FORMACIÓN</th> <th class="text-center">VISTO MELI</th> <th class="qa-actions-col"><i class="fas fa-edit icon"></i>ACCIONES</th> </tr> </thead>
+           <tbody id="qaTableBody"> <tr> <td colspan="12" class="no-data">Cargando registros QA...</td> </tr> </tbody>
+         </table>
+        </div>
+        <div id="qaPaginationControls" class="pagination-controls"> </div>
+    </div>
+  </div>
+  <script>
+    let notifiedResolvedQACases = new Set();
+    let currentUser = '';
+    let pollingIntervalId = null;
+    const POLLING_INTERVAL_MS = 30000;
+    let qaCurrentPage = 1;
+    const itemsPerPageQA = 10;
+    let currentQaData = [];
+    let currentFilteredQaData = [];
+    let asignacionesSearchColumnIndices = {};
+    const ASIGNACIONES_HEADERS_TO_SEARCH = ['#Caso', 'Fecha y hora de la asignación', 'Simple Day', 'Canal', 'Proceso', 'Tipo de accion','Oficina','Interacción'];
+    const SIMPLE_DAY_HEADER = "Simple Day";
+    const FECHA_ASIGNACION_HEADER = "Fecha y hora de la asignación";
+    const CONTROL_APERTURA_HEADER = "Control Apertura Url";
+    const LINK_HEADER = "Link";
+    const INTERACCION_HEADER = "Interacción";
+    const MARCA_EG_HEADER = "Marca de EG";
+    const MARCA_CI_HEADER = "Marca de CI";
+
+    function setMetricsLoading() {
+      const spinner = '<i class="fas fa-spinner fa-spin"></i>';
+      const ids = [
+        'assignedCasesCount',
+        'closedCasesCount',
+        'pendingCasesCount',
+        'tmoMetric',
+        'tiempoGestionMetric',
+        'tiempoInactivoMetric',
+        'afectacionNaCount',
+        'afectacionEgCount',
+        'afectacionCiCount'
+      ];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = spinner;
+      });
+    }
+
+    function handleLogin() {
+      const usernameInput = document.getElementById('usernameInput');
+      const username = usernameInput.value.trim();
+      if (!username) {
+        Swal.fire('Error', 'Ingrese un usuario.', 'warning');
+        return;
+      }
+
+      // Validación de identidad con Apps Script
+      google.script.run.withSuccessHandler(response => {
+        if (response && response.success && response.rol) {
+          // Guardar toda la información del usuario
+          currentUser = {
+            username: response.username,
+            nombre: response.nombre,
+            rol: response.rol
+          };
+
+          // Mostrar dashboard y ocultar login
+          document.getElementById('loginContainer').style.display = 'none';
+          document.getElementById('dashboardContainer').style.display = 'block';
+          
+          // Mostrar nombre y rol
+          document.getElementById('userInfo').innerHTML = `<i class="fas fa-user-circle icon"></i>Hola, <strong>${response.nombre}</strong> (${response.rol})`;
+          
+          // Inicializar el dashboard con el rol correcto
+          initializeDashboard();
+          
+          // Mostrar spinner y cargar métricas
+          setMetricsLoading();
+          loadMetricsData(currentUser.username);
+        } else {
+          Swal.fire('Acceso Denegado', response.message || 'Usuario no válido.', 'error');
+        }
+      }).withFailureHandler(error => {
+        Swal.fire('Error Conexión', `Error al iniciar sesión: ${error.message}`, 'error');
+      }).verificarUsuario(username);
+    }
+
+    function loadMetricsData(ldap) {
+      // Mostrar spinner en todas las métricas
+      const metricIds = [
+        'metric-total-casos',
+        'metric-casos-hoy',
+        'metric-casos-pendientes',
+        'metric-errores-gestion',
+        'metric-conductas-inadecuadas'
+      ];
+      
+      metricIds.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+      });
+
+      // Llamar al backend para obtener las métricas
+      google.script.run
+        .withSuccessHandler(function(metrics) {
+          if (metrics) {
+            // Actualizar cada métrica con su valor correspondiente
+            document.getElementById('metric-total-casos').textContent = metrics.totalCasos;
+            document.getElementById('metric-casos-hoy').textContent = metrics.casosHoy;
+            document.getElementById('metric-casos-pendientes').textContent = metrics.casosPendientes;
+            document.getElementById('metric-errores-gestion').textContent = metrics.erroresGestion;
+            document.getElementById('metric-conductas-inadecuadas').textContent = metrics.conductasInadecuadas;
+          } else {
+            // Si hay error, mostrar mensaje en las métricas
+            metricIds.forEach(id => {
+              const element = document.getElementById(id);
+              if (element) {
+                element.innerHTML = 'Error';
+              }
+            });
+          }
+        })
+        .withFailureHandler(function(error) {
+          // En caso de error, mostrar mensaje en las métricas
+          metricIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+              element.innerHTML = 'Error';
+            }
+          });
+          console.error('Error al cargar métricas:', error);
+        })
+        .getMetricsData(ldap);
+    }
+
+    function openTab(evt, tabName) {
+        if (currentUser && currentUser.rol === 'QS' && tabName === 'asignaciones') return;
+        var i, tabcontent, tablinks; tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; tabcontent[i].classList.remove("active"); }
+        tablinks = document.getElementsByClassName("tab-button");
+        for (i = 0; i < tablinks.length; i++) { tablinks[i].classList.remove("active"); }
+        const currentTab = document.getElementById(tabName); if (currentTab) { currentTab.style.display = "block"; setTimeout(() => currentTab.classList.add("active"), 10); }
+        if(evt && evt.currentTarget) evt.currentTarget.classList.add("active");
+        const necesitaCargaInicial = !evt;
+        if (tabName === 'qa') {
+             const qaFormContainer = document.getElementById('qaFormContainer'); if (qaFormContainer) qaFormContainer.style.display = 'none';
+             const tablaBody = document.getElementById("qaTableBody"); const primeraCargaQA = !tablaBody || tablaBody.innerHTML.includes('no-data') || tablaBody.innerHTML.includes('Cargando');
+             if(necesitaCargaInicial || primeraCargaQA) cargarRegistrosDesdeSheetsQA();
+             else filterAndDisplayQaData(document.getElementById('qaSearchInput')?.value || '');
+         } else if (tabName === 'asignaciones') {
+             const asignacionesTableBody = document.getElementById("dataTableBody"); const primeraCargaAsignaciones = !asignacionesTableBody || asignacionesTableBody.innerHTML.includes('Seleccione usuario');
+             if (currentUser && (currentUser.rol === 'Administrador' || currentUser.rol === 'QA') && (necesitaCargaInicial || primeraCargaAsignaciones)) {
+                  if(document.getElementById("ldapSelect")) loadDropdown("getLDAPUsers", "ldapSelect", "Seleccione usuario LDAP");
+                  if(document.getElementById("teamSelect")) loadDropdown("getTeams", "teamSelect", "Seleccione equipo");
+             }
+        }
+    }
+    function showLoading(show) { document.getElementById("loading").style.display = show ? "flex" : "none"; }
+    function getCurrentFormattedTimestampCliente() {
+        const now = new Date(); const day = String(now.getDate()).padStart(2, '0'); const month = String(now.getMonth() + 1).padStart(2, '0'); const year = now.getFullYear();
+        let hours = now.getHours(); const minutes = String(now.getMinutes()).padStart(2, '0'); const seconds = String(now.getSeconds()).padStart(2, '0'); const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12; hours = hours ? hours : 12; const hoursStr = String(hours).padStart(2, '0'); const strTime = `${hoursStr}:${minutes}:${seconds} ${ampm}`;
+        return `${day}-${month}-${year}, ${strTime}`;
+    }
+    function setRefreshButtonState(isLoading) {
+        const btn = document.getElementById('refreshButton'); if (!btn) return; const icon = btn.querySelector('i.fas');
+        btn.disabled = isLoading; btn.classList.toggle('loading', isLoading); if(icon) icon.className = `fas ${isLoading ? 'fa-spinner' : 'fa-sync-alt'} icon`;
+    }
+    function refreshCurrentTabData() {
+        const activeTabButton = document.querySelector('.tab-button.active'); if (!activeTabButton) return;
+        const tabTarget = activeTabButton.getAttribute('data-tab-target'); console.log(`Refrescando ${tabTarget}...`); setRefreshButtonState(true);
+
+        // Actualizar métricas al refrescar
+        updateMetrics();
+
+        switch (tabTarget) {
+            case 'asignaciones':
+                const ldapSelect = document.getElementById("ldapSelect"); const teamSelect = document.getElementById("teamSelect");
+                if (ldapSelect && teamSelect && ldapSelect.value && teamSelect.value) { ldapSelect.disabled = true; teamSelect.disabled = true; loadAssignments(ldapSelect.value, teamSelect.value); }
+                else { const body = document.getElementById("dataTableBody"); const header = document.querySelector("#dataTable thead"); if (body) { let colspan = header?.rows[0]?.cells.length || 13; body.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Seleccione usuario y equipo.</td></tr>`; } if (header) header.innerHTML = ''; document.getElementById("asignacionesSearchInput")?.setAttribute('disabled', 'true'); setRefreshButtonState(false); }
+                break;
+            case 'qa': const qaForm = document.getElementById('qaFormContainer'); if (qaForm) qaForm.style.display = 'none'; cargarRegistrosDesdeSheetsQA(); break;
+            default: console.error(`Pestaña desconocida: ${tabTarget}`); setRefreshButtonState(false); break;
+        }
+    }
+    function handleAssignmentSelectionChange() {
+        const ldap = document.getElementById("ldapSelect").value; const team = document.getElementById("teamSelect").value;
+        const body = document.getElementById("dataTableBody"); const header = document.querySelector("#dataTable thead"); const searchInput = document.getElementById("asignacionesSearchInput");
+        if (searchInput) searchInput.value = '';
+        if (ldap && team) { setRefreshButtonState(true); document.getElementById("ldapSelect").disabled = true; document.getElementById("teamSelect").disabled = true; loadAssignments(ldap, team); }
+        else { if(body) { let colspan = header?.rows[0]?.cells.length || 13; body.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Seleccione usuario y equipo.</td></tr>`; } if(header) header.innerHTML=''; if(searchInput) searchInput.disabled = true; }
+    }
+    function loadDropdown(endpoint, elementId, placeholder) {
+        const select = document.getElementById(elementId); if(!select) return;
+        select.innerHTML = `<option value="">Cargando...</option>`; select.disabled = true;
+        google.script.run.withSuccessHandler(data => {
+            if (data && Array.isArray(data) && data.length > 0) { select.innerHTML = `<option value="">${placeholder}</option>` + data.map(item => `<option value="${item}">${item}</option>`).join(''); }
+            else { select.innerHTML = `<option value="">No hay opciones</option>`; } select.disabled = false;
+        }).withFailureHandler(error => { console.error(`Error cargando ${elementId}:`, error); select.innerHTML = `<option value="">Error</option>`; select.disabled = false; })[endpoint]();
+    }
+    function parseDateString(dateString) {
+        if (!dateString || typeof dateString !== 'string') return null; dateString = dateString.trim(); let date = null;
+        let matchDateOnly = dateString.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (matchDateOnly) { try { let day = parseInt(matchDateOnly[1], 10); let month = parseInt(matchDateOnly[2], 10) - 1; let year = parseInt(matchDateOnly[3], 10); date = new Date(Date.UTC(year, month, day)); if (isNaN(date.getTime())) date = null; } catch(e){ date = null; } }
+        if (!date) { let matchDateTime = dateString.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[,\s]+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
+        if (matchDateTime) { try { let day = parseInt(matchDateTime[1], 10); let month = parseInt(matchDateTime[2], 10) - 1; let year = parseInt(matchDateTime[3], 10); let hour = parseInt(matchDateTime[4], 10); let minute = parseInt(matchDateTime[5], 10); let second = parseInt(matchDateTime[6], 10); let ampm = matchDateTime[7].toUpperCase(); if (ampm === 'PM' && hour < 12) hour += 12; if (ampm === 'AM' && hour === 12) hour = 0; date = new Date(Date.UTC(year, month, day, hour, minute, second)); if (isNaN(date.getTime())) date = null; } catch (e) { date = null; } } }
+        if (!date) { try { let tempDate = new Date(dateString); if (!isNaN(tempDate.getTime())) date = tempDate; } catch(e) {} } return date;
+    }
+    function loadAssignments(ldap, team) {
+        const table = document.getElementById("dataTable"); const tableHead = table.querySelector("thead"); const tableBody = table.querySelector("tbody");
+        const ldapSelect = document.getElementById("ldapSelect"); const teamSelect = document.getElementById("teamSelect"); const searchInput = document.getElementById("asignacionesSearchInput");
+        if (searchInput) searchInput.value = '';
+        if (!tableHead || !tableBody) { console.error("Tabla asignaciones no encontrada."); setRefreshButtonState(false); if(ldapSelect)ldapSelect.disabled=false; if(teamSelect)teamSelect.disabled=false; return; }
+        setRefreshButtonState(true); if (ldapSelect) ldapSelect.disabled = true; if (teamSelect) teamSelect.disabled = true;
+        let initialColspan = tableHead.rows[0]?.cells.length || 13; tableBody.innerHTML = `<tr><td colspan="${initialColspan}" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>`; tableHead.innerHTML = ''; asignacionesSearchColumnIndices = {};
+        google.script.run.withSuccessHandler(response => {
+            if (!response || !response.headers || !response.data || !Array.isArray(response.headers) || !Array.isArray(response.data)) { console.error("Respuesta inválida de getAssignments:", response); tableHead.innerHTML = ''; tableBody.innerHTML = `<tr><td colspan="13" class="no-data">Error al cargar datos.</td></tr>`; if (searchInput) searchInput.disabled = true; }
+            else if (response.headers.length === 0) { console.log("No hay cabeceras ni datos para", ldap, team); tableHead.innerHTML = ''; tableBody.innerHTML = `<tr><td colspan="13" class="no-data">No hay asignaciones pendientes.</td></tr>`; if (searchInput) searchInput.disabled = true; }
+            else {
+                 const allHeaders = response.headers; const data = response.data; const headersToAlwaysHide = [MARCA_EG_HEADER, MARCA_CI_HEADER, "Control Cierre Url", CONTROL_APERTURA_HEADER];
+                 let simpleDayColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === SIMPLE_DAY_HEADER.toLowerCase()); let fechaAsignacionColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === FECHA_ASIGNACION_HEADER.toLowerCase());
+                 let aperturaColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === CONTROL_APERTURA_HEADER.toLowerCase()); let linkColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === LINK_HEADER.toLowerCase());
+                 let caseNumberIndexOriginal = allHeaders.findIndex(h => String(h).toLowerCase() === '#caso'); let interaccionColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === INTERACCION_HEADER.toLowerCase());
+                 const visibleHeadersData = allHeaders.map((h, index) => ({ header: h, originalIndex: index })).filter(item => !headersToAlwaysHide.includes(item.header));
+                 const numVisibleColumns = visibleHeadersData.length + 2;
+                 let caseCounts = {};
+                 let processedData = data.map((row, originalRowIndex) => {
+                     const simpleDayString = (simpleDayColIndexOriginal !== -1 && row.length > simpleDayColIndexOriginal) ? row[simpleDayColIndexOriginal] : null; const fechaAsignacionString = (fechaAsignacionColIndexOriginal !== -1 && row.length > fechaAsignacionColIndexOriginal) ? row[fechaAsignacionColIndexOriginal] : null;
+                     const aperturaTimestamp = (aperturaColIndexOriginal !== -1 && row.length > aperturaColIndexOriginal) ? row[aperturaColIndexOriginal] : null; const simpleDayDate = parseDateString(simpleDayString); const fechaAsignacionDate = parseDateString(fechaAsignacionString);
+                     const caseNumber = (caseNumberIndexOriginal !== -1 && row[caseNumberIndexOriginal]) ? String(row[caseNumberIndexOriginal]).trim() : null; const interactionId = (interaccionColIndexOriginal !== -1 && row[interaccionColIndexOriginal]) ? String(row[interaccionColIndexOriginal]).trim() : `int-${originalRowIndex}-${Date.now()}`;
+                     if (caseNumber) { caseCounts[caseNumber] = (caseCounts[caseNumber] || 0) + 1; }
+                     let isOverdue = false; if (simpleDayDate && fechaAsignacionDate) { const sdUTC = Date.UTC(simpleDayDate.getFullYear(), simpleDayDate.getMonth(), simpleDayDate.getDate()); const faUTC = Date.UTC(fechaAsignacionDate.getFullYear(), fechaAsignacionDate.getMonth(), fechaAsignacionDate.getDate()); if (sdUTC < faUTC) isOverdue = true; }
+                     return { rowData: row, isOverdue: isOverdue, fechaAsignacion: fechaAsignacionDate, aperturaTimestamp: aperturaTimestamp, caseNumber: caseNumber, interactionId: interactionId };
+                 });
+                 processedData.sort((a, b) => { if (a.isOverdue && !b.isOverdue) return -1; if (!a.isOverdue && b.isOverdue) return 1; const dateA = a.fechaAsignacion; const dateB = b.fechaAsignacion; if (dateA && dateB) return dateB.getTime() - dateA.getTime(); else if (dateB) return 1; else if (dateA) return -1; else return 0; });
+                 let headerHtml = '<tr><th>#</th>'; let currentVisibleIndex = 1; asignacionesSearchColumnIndices = {}; let visibleCaseIndex = -1; let visibleInteractionIndex = -1;
+                 visibleHeadersData.forEach(({ header }) => { const cleanedHeader = String(header).trim(); headerHtml += `<th>${cleanedHeader}</th>`; if (ASIGNACIONES_HEADERS_TO_SEARCH.some(searchHdr => cleanedHeader.toLowerCase() === searchHdr.toLowerCase())) { asignacionesSearchColumnIndices[cleanedHeader] = currentVisibleIndex; } if (cleanedHeader.toLowerCase() === '#caso') { visibleCaseIndex = currentVisibleIndex; } if (cleanedHeader.toLowerCase() === INTERACCION_HEADER.toLowerCase()) { visibleInteractionIndex = currentVisibleIndex; } currentVisibleIndex++; });
+                 headerHtml += '<th><i class="fas fa-cogs icon"></i>Acciones</th></tr>'; tableHead.innerHTML = headerHtml; console.log("Índices búsqueda Asignaciones (Visibles):", asignacionesSearchColumnIndices); console.log("Índice visible #Caso:", visibleCaseIndex, "Índice visible Interacción:", visibleInteractionIndex);
+                 if (processedData.length === 0) { tableBody.innerHTML = `<tr><td colspan="${numVisibleColumns}" class="no-data">No hay asignaciones pendientes para ${ldap} en ${team}.</td></tr>`; if (searchInput) searchInput.disabled = true; }
+                 else {
+                     try {
+                         tableBody.innerHTML = processedData.map((item, index) => {
+                             const row = item.rowData; const isOverdue = item.isOverdue; const aperturaTimestamp = item.aperturaTimestamp; const caseNumber = item.caseNumber; const interactionId = item.interactionId; const isRepeated = caseNumber && caseCounts[caseNumber] > 1;
+                             if (!Array.isArray(row) || row.length !== allHeaders.length) { console.warn(`Fila ${index+1} inválida`); return `<tr><td colspan="${numVisibleColumns}">Error fila ${index+1}</td></tr>`; }
+                             const rowId = `assignment-row-${caseNumber}-${interactionId}-${index}`; const rowClass = isOverdue ? 'overdue-case' : ''; let rowHtml = `<tr id="${rowId}" class="${rowClass}"><td>${index + 1}</td>`;
+                             visibleHeadersData.forEach(({ originalIndex, header }, visibleIndex) => { let cellContent = (row.length > originalIndex && row[originalIndex] != null) ? String(row[originalIndex]) : ''; let tdClass = ''; const currentVisibleCellIndex = visibleIndex + 1; if (isRepeated && (currentVisibleCellIndex === visibleCaseIndex || currentVisibleCellIndex === visibleInteractionIndex)) { tdClass += ' repeated-case-highlight'; } if (originalIndex === linkColIndexOriginal && typeof cellContent === 'string' && (cellContent.startsWith("http://") || cellContent.startsWith("https://"))) { const safeUrl = cellContent.replace(/"/g, '&quot;'); let linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="Abrir Enlace" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">Enlace</a>`; if (aperturaTimestamp) { const safeTimestamp = String(aperturaTimestamp).replace(/"/g, '&quot;'); linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="Abrir Enlace" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">Enlace<i class="fas fa-eye" title="Abierto: ${safeTimestamp}"></i></a>`; } cellContent = linkInnerHtml; tdClass += ' text-center'; } rowHtml += `<td class="${tdClass.trim()}">${cellContent}</td>`; });
+                             const safeRowId = rowId.replace(/'/g, "\\'"); const safeTeam = team.replace(/'/g, "\\'"); const safeLdap = ldap.replace(/'/g, "\\'"); const safeCaseNumber = String(caseNumber).replace(/'/g, "\\'"); const safeInteractionId = String(interactionId).replace(/'/g, "\\'");
+                             rowHtml += `<td class="actions-cell"><button class="btn-action" onclick="finalizarCaso('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-check-circle icon"></i>Finalizar</button><button class="btn-confirm-gestion" onclick="abrirModalConfirmacionGestion('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-marker icon"></i>Confirma tu Gestión</button></td>`; rowHtml += `</tr>`; return rowHtml;
+                         }).join(''); filterAsignacionesTable(''); if (searchInput) searchInput.disabled = false;
+                     } catch (mapError) { console.error("Error mapeo asignaciones:", mapError); tableBody.innerHTML = `<tr><td colspan="${numVisibleColumns}" class="no-data">Error al mostrar datos.</td></tr>`; if (searchInput) searchInput.disabled = true; }
+                 }
+            }
+             if (ldapSelect) ldapSelect.disabled = false; if (teamSelect) teamSelect.disabled = false; setRefreshButtonState(false);
+         }).withFailureHandler(error => { console.error("Error cargando asignaciones:", error); const cols = 13; tableHead.innerHTML = ''; tableBody.innerHTML = `<tr><td colspan="${cols}" class="no-data">Error: ${error.message}</td></tr>`; if (ldapSelect) ldapSelect.disabled = false; if (teamSelect) teamSelect.disabled = false; if (searchInput) searchInput.disabled = true; setRefreshButtonState(false); }).getAssignments(ldap, team);
+    }
+    function filterAsignacionesTable(searchTerm) {
+        const tableBody = document.getElementById("dataTableBody"); const searchInput = document.getElementById("asignacionesSearchInput");
+        const rows = tableBody.getElementsByTagName('tr'); const term = searchTerm.toLowerCase().trim(); let visibleRows = 0;
+        let colspan = document.querySelector("#dataTable thead tr")?.cells.length || 13;
+        if (rows.length === 1 && rows[0].querySelector('.no-data, .loading')) { if (searchInput) searchInput.disabled = !tableBody.querySelector('td:not(.no-data):not(.loading)'); return; }
+        const visibleIndicesToSearch = Object.values(asignacionesSearchColumnIndices);
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]; const cells = row.getElementsByTagName('td'); let found = false;
+            if (cells.length > 1 && !row.classList.contains('no-search-results')) {
+                 for (const visibleCellIndex of visibleIndicesToSearch) { const targetCell = cells[visibleCellIndex]; if (targetCell) { const cellText = targetCell.textContent || targetCell.innerText; if (cellText.toLowerCase().includes(term)) { found = true; break; } } }
+                 row.style.display = (found || term === '') ? "" : "none"; if (found || term === '') visibleRows++;
+            } else if (row.classList.contains('no-search-results')) { row.style.display = "none"; }
+        }
+        let noResultsRow = tableBody.querySelector('.no-search-results');
+        if (visibleRows === 0 && term !== '') { if (!noResultsRow) { noResultsRow = tableBody.insertRow(); noResultsRow.className = 'no-search-results'; const cell = noResultsRow.insertCell(); cell.colSpan = colspan; cell.className = 'no-data'; noResultsRow.appendChild(cell); } noResultsRow.cells[0].textContent = `No se encontraron casos que coincidan con "${searchTerm}".`; noResultsRow.style.display = ""; }
+        else { if (noResultsRow) noResultsRow.style.display = "none"; }
+        let hasDataRows = Array.from(rows).some(r => !r.classList.contains('no-search-results') && !r.querySelector('.no-data, .loading'));
+        if (searchInput) searchInput.disabled = !hasDataRows;
+    }
+    function logLinkClick(event, rowId, team, ldap, caseNumber, interactionId) {
+        console.log(`Registrando apertura: ${team}/${ldap}/${caseNumber} (Int: ${interactionId})`); const link = event.currentTarget; let spinner = null; const hasExistingIcon = link.querySelector('.fa-eye, .fa-exclamation-triangle');
+        if (!hasExistingIcon && !link.querySelector('.fa-spinner')) { spinner = document.createElement('i'); spinner.className = 'fas fa-spinner fa-spin'; spinner.style.marginLeft='5px'; link.appendChild(spinner); }
+        google.script.run.withSuccessHandler(msg => { console.log(`Apertura OK: ${msg}`); if (spinner) spinner.remove(); if (link && !link.querySelector('.fa-eye') && !link.querySelector('.fa-exclamation-triangle')) { const icon = document.createElement('i'); icon.className = 'fas fa-eye'; icon.title = `Abierto: ${getCurrentFormattedTimestampCliente()}`; link.appendChild(icon); } })
+        .withFailureHandler(err => { console.error(`Error apertura: ${err}`); if(spinner) spinner.remove(); if(link && !link.querySelector('.fa-exclamation-triangle') && !link.querySelector('.fa-eye')) { const icon = document.createElement('i'); icon.className = 'fas fa-exclamation-triangle'; icon.style.color='red'; icon.style.marginLeft='5px'; icon.title=`Error registro apertura: ${err.message}`; link.appendChild(icon); } Swal.fire({ icon: 'error', title: 'Error Registro', text: `No se pudo registrar la apertura: ${err.message}`, toast: true, position: 'top-end', showConfirmButton: false, timer: 4000 }); })
+        .recordTimestamp(team, ldap, caseNumber, interactionId, null, 'apertura');
+    }
+    function finalizarCaso(rowId, team, ldap, caseNumber, interactionId) {
+        Swal.fire({ title: 'Confirmar Finalización', html: `¿Marcar como finalizado el caso #<b>${caseNumber}</b> (Interacción: ${interactionId})?<br><br>Si lo finaliza, ya no estará disponible en esta tabla.`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d', confirmButtonText: '<i class="fas fa-check"></i> Sí, Finalizar', cancelButtonText: '<i class="fas fa-times"></i> No' })
+         .then((result) => {
+             if (result.isConfirmed) {
+                 const rowElement = document.getElementById(rowId); if (!rowElement) { Swal.fire('Error', 'No se encontró la fila.', 'error'); return; }
+                 const button = rowElement.querySelector('.btn-action'); if(button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin icon"></i> Finalizando...'; }
+                 google.script.run.withSuccessHandler(msg => { console.log(`Caso ${caseNumber}/${interactionId} finalizado: ${msg}`); rowElement.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out'; rowElement.style.opacity = '0'; rowElement.style.transform = 'translateX(-20px)'; setTimeout(() => { rowElement.remove(); const tableBody = document.getElementById("dataTableBody"); const tableHeader = document.querySelector("#dataTable thead"); const searchInput = document.getElementById('asignacionesSearchInput'); const searchTerm = searchInput ? searchInput.value.trim() : ''; let visibleRowsAfterDelete = Array.from(tableBody.rows).some(r => r.style.display !== 'none' && !r.classList.contains('no-search-results')); if (!visibleRowsAfterDelete) { if (searchTerm) { filterAsignacionesTable(searchTerm); } else { let colspan = tableHeader?.rows[0]?.cells.length || 13; tableBody.innerHTML = `<tr><td colspan="${colspan}" class="no-data">No quedan asignaciones pendientes.</td></tr>`; if (searchInput) searchInput.disabled = true; } } else { filterAsignacionesTable(searchTerm); } }, 500); Swal.fire({ icon: 'success', title: 'Finalizado', text: `Caso #${caseNumber} (Int: ${interactionId}) marcado como finalizado.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 4000 }); })
+                 .withFailureHandler(err => { console.error(`Error finalizar caso ${caseNumber}/${interactionId}:`, err); Swal.fire('Error', `No se pudo finalizar caso #${caseNumber} (Int: ${interactionId}).<br><i>${err.message}</i>`, 'error'); if(button) { button.disabled = false; button.innerHTML = '<i class="fas fa-check-circle icon"></i>Finalizar'; } })
+                 .recordTimestamp(team, ldap, caseNumber, interactionId, null, 'cierre');
+            }
+        });
+    }
+    function abrirModalConfirmacionGestion(rowId, team, ldap, caseNumber, interactionId) {
+    const htmlContent = `
+  <p style="text-align: center; margin-bottom: 20px;">
+    Confirma por favor si hubo marcación en:
+  </p>
+
+  <h4 class="swal-gestion-subtitle">Matriz de Faltas - Error de Gestión:</h4>
+  <ul class="swal-gestion-list">
+    <li>
+      <input type="checkbox" id="eg-EG1" value="EG1">
+      <label for="eg-EG1">EG1 - Gestión incorrecta - no hecha</label>
+    </li>
+    <li>
+      <input type="checkbox" id="eg-EG2" value="EG2">
+      <label for="eg-EG2">EG2 - Respuesta Incorrecta - Incompleta</label>
+    </li>
+    <li>
+      <input type="checkbox" id="eg-EG3" value="EG3">
+      <label for="eg-EG3">EG3 - Ampliación de consulta o pedido de datos incorrecto</label>
+    </li>
+    <li>
+      <input type="checkbox" id="eg-EG4" value="EG4">
+      <label for="eg-EG4">EG4 - Clasificación de proceso incorrecto</label>
+    </li>
+    <li>
+      <input type="checkbox" id="eg-EG5" value="EG5">
+      <label for="eg-EG5">EG5 - [SHS] Desvíos Regulatorios y de Plazos</label>
+    </li>
+    <li>
+      <input type="checkbox" id="eg-CasoNA" value="Caso N/A">
+      <label for="eg-CasoNA">Caso N/A - Cerrado como "No auditable" (Acción no auditable)</label>
+    </li>
+    <li>
+      <input type="checkbox" id="eg-CerradoNASOEG" value="Cerrado N/A-SO-EG">
+      <label for="eg-CerradoNASOEG">Cerrado N/A-SO-EG - (No evaluaste ningun Picklist o Subpicklist)</label>
+    </li>
+  </ul>
+
+  <div style="height: 20px;"></div>
+
+  <h4 class="swal-gestion-subtitle">Matriz de Faltas - Conducta Inadecuada:</h4>
+  <ul class="swal-gestion-list">
+    <li>
+      <input type="checkbox" id="ci-CI1" value="CI1">
+      <label for="ci-CI1">CI1 - Genera promesa o expectativa indebida</label>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CI2" value="CI2">
+      <label for="ci-CI2">CI2 - CSR cuando no corresponde</label>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CI3" value="CI3">
+      <label for="ci-CI3">CI3 - Derivación incorrecta cuando CDU corresponde a su equipo</label>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CI4" value="CI4">
+      <label for="ci-CI4">CI4 - Habla mal de MeLi, y todas las entidades asociadas</label>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CI5" value="CI5">
+      <label for="ci-CI5">CI5 - Infracción legal</label>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CI6" value="CI6">
+      <label for="ci-CI6">CI6 - Bonifica o realiza acciones que generan bonificación incorrectamente</label>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CI7" value="CI7">
+      <label for="ci-CI7">CI7 - Particularidades</label>
+    </li>
+    <li>
+      <label style="font-weight: bold; display:block; margin-bottom: 5px;">
+        CI - TL - ¿La Conducta Inadecuada tiene un Visto con TL?
+      </label>
+      <div class="ci-tl-group">
+        <input type="checkbox" id="ci_tl_si" value="Si">
+        <label for="ci-tl-si">Si</label>
+        <input type="checkbox" id="ci_tl_no" value="No">
+        <label for="ci-tl-no">No</label>
+      </div>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CasoNACI" value="Caso N/A-CI">
+      <label for="ci-CasoNACI">Caso N/A-CI - Cerrado como "No auditable" (Acción no auditable)</label>
+    </li>
+    <li>
+      <input type="checkbox" id="ci-CasoSOCI" value="Caso SO - Cerrado N/A-SO-CI">
+      <label for="ci-CasoSOCI">Caso SO - Cerrado N/A-SO-CI (No evaluaste ningun Picklist o Subpicklist)</label>
+    </li>
+  </ul>
+`;
+        Swal.fire({ title: 'Confirma tu Gestión', html: htmlContent, showCloseButton: true, showCancelButton: false, confirmButtonText: '<i class="fas fa-save icon"></i> Guardar Marcas', confirmButtonColor: '#3085d6', width: '750px',
+            didOpen: () => { const siCheckbox = Swal.getPopup().querySelector('#ci_tl_si'); const noCheckbox = Swal.getPopup().querySelector('#ci_tl_no'); siCheckbox.addEventListener('change', () => { if (siCheckbox.checked) noCheckbox.checked = false; }); noCheckbox.addEventListener('change', () => { if (noCheckbox.checked) siCheckbox.checked = false; }); },
+            preConfirm: () => {
+                const marcasEG = []; const egCheckboxes = Swal.getPopup().querySelectorAll('input[id^="eg_"]:checked'); egCheckboxes.forEach(cb => marcasEG.push(cb.value));
+                const marcasCI = []; const ciCheckboxes = Swal.getPopup().querySelectorAll('input[id^="ci_"]:not(#ci_tl_si):not(#ci_tl_no):checked'); ciCheckboxes.forEach(cb => marcasCI.push(cb.value));
+                const ciTlSiChecked = Swal.getPopup().querySelector('#ci_tl_si').checked; const ciTlNoChecked = Swal.getPopup().querySelector('#ci_tl_no').checked;
+                if (ciTlSiChecked && ciTlNoChecked) { Swal.showValidationMessage('Seleccione solo "Si" o "No" para CI_TL.'); return false; }
+                if (ciTlSiChecked) { marcasCI.push('TL/Si'); } else if (ciTlNoChecked) { marcasCI.push('TL/No'); }
+                return { marcasEG, marcasCI };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const { marcasEG, marcasCI } = result.value; console.log(`Guardando marcas para Caso ${caseNumber} (Int: ${interactionId}) - EG: [${marcasEG.join('; ')}], CI: [${marcasCI.join('; ')}]`);
+                Swal.fire({ title: 'Guardando Marcas...', text: 'Por favor espera.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                google.script.run.withSuccessHandler(response => { Swal.fire({ icon: 'success', title: '¡Guardado!', text: response, timer: 2500, timerProgressBar: true, showConfirmButton: false }); })
+                    .withFailureHandler(error => { console.error("Error al guardar marcas:", error); Swal.fire({ icon: 'error', title: 'Error al Guardar', html: `No se pudieron guardar las marcas.<br><i>${error.message}</i>` }); })
+                    .guardarMarcasGestion(team, ldap, caseNumber, interactionId, marcasEG, marcasCI);
+            }
+        });
+    }
+    function guardarRegistroQA() { if (!currentUser) return; let ldapQa=currentUser.username, team=document.getElementById("qaTeam").value.trim(), caso=document.getElementById("qaCaso").value.trim(), rep=document.getElementById("qaRepEvaluar").value.trim(), pregunta=document.getElementById("qaPregunta").value.trim(); if (!team||!caso||!rep||!pregunta){Swal.fire('Incompleto','Faltan campos QA','warning');return;} let data=[null,ldapQa,team,caso,rep,pregunta]; Swal.fire({title:'Guardando QA...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()}); google.script.run.withSuccessHandler(m=>{ Swal.close(); Swal.fire('Guardado',m,'success'); limpiarFormularioQA(); document.getElementById('qaFormContainer').style.display='none'; cargarRegistrosDesdeSheetsQA(); }).withFailureHandler(e=>{ Swal.close(); Swal.fire('Error',`No se guardó QA: ${e.message}`,'error'); }).guardarEnSheetsQA(data); }
+    function limpiarFormularioQA() { document.getElementById("qaTeam").value=''; document.getElementById("qaCaso").value=''; document.getElementById("qaRepEvaluar").value=''; document.getElementById("qaPregunta").value=''; if(currentUser) document.getElementById('qaLdapQa').value=currentUser.username; }
+    function cargarRegistrosDesdeSheetsQA() { let body=document.getElementById("qaTableBody"); if(!body){setRefreshButtonState(false);return;} if(!currentUser){body.innerHTML=`<tr><td colspan="12">Error usuario</td></tr>`;setRefreshButtonState(false);return;} const showActions=currentUser.rol==='Administrador'||currentUser.rol==='QS'; const colspan=showActions?12:11; setRefreshButtonState(true); body.innerHTML=`<tr><td colspan="${colspan}" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando QA...</td></tr>`; document.getElementById("qaPaginationControls").innerHTML=''; document.getElementById('qaSearchInput').value=''; google.script.run.withSuccessHandler(data=>{ if(!data||!Array.isArray(data)||data.length<1){body.innerHTML=`<tr><td colspan="${colspan}" class="no-data">No hay registros QA.</td></tr>`;currentQaData=[];currentFilteredQaData=[];} else if(data.length===1){body.innerHTML=`<tr><td colspan="${colspan}" class="no-data">No hay registros QA.</td></tr>`;currentQaData=[];currentFilteredQaData=[];} else{currentQaData=data.slice(1);currentFilteredQaData=[...currentQaData];qaCurrentPage=1;displayQaPage(currentFilteredQaData);} setRefreshButtonState(false);}).withFailureHandler(e=>{console.error("Error carga QA:",e);body.innerHTML=`<tr><td colspan="${colspan}" class="no-data">Error carga QA: ${e.message}</td></tr>`;currentQaData=[];currentFilteredQaData=[];setRefreshButtonState(false);}).obtenerRegistrosQA(currentUser); }
+    function filterAndDisplayQaData(term){term=term.toLowerCase().trim();if(!term){currentFilteredQaData=[...currentQaData];}else{currentFilteredQaData=currentQaData.filter(r=>{if(!Array.isArray(r)||r.length<4)return false;const d0=(r[0]||'').toLowerCase();const d1=(r[1]||'').toLowerCase();const d3=(r[3]||'').toLowerCase();return d0.includes(term)||d1.includes(term)||d3.includes(term);});}qaCurrentPage=1;displayQaPage(currentFilteredQaData);}
+    function displayQaPage(data){let body=document.getElementById("qaTableBody");if(!body)return;if(!currentUser){body.innerHTML=`<tr><td colspan="12">Error usuario</td></tr>`;return;}const showActions=currentUser.rol==='Administrador'||currentUser.rol==='QS';const colspan=showActions?12:11;body.innerHTML="";const searchTerm=document.getElementById('qaSearchInput')?.value.trim()||'';if(!data||data.length===0){let msg="No hay registros.";if(searchTerm){msg=`No hay resultados para "${searchTerm}".`;}else{msg=(currentUser.rol==='QS')?"No regs. visibles":(currentUser.rol==='QA')?"No regs. QA creados.":"No regs. QA.";}body.innerHTML=`<tr><td colspan="${colspan}" class="no-data">${msg}</td></tr>`;renderQaPaginationControls(0,itemsPerPageQA);return;}const total=data.length;const pages=Math.ceil(total/itemsPerPageQA);if(qaCurrentPage<1)qaCurrentPage=1;if(qaCurrentPage>pages)qaCurrentPage=pages;const start=(qaCurrentPage-1)*itemsPerPageQA;const end=start+itemsPerPageQA;const pageData=data.slice(start,end);const cols=11;const caseIdx=3;const dateIdx=0;pageData.forEach((row,idx)=>{if(!Array.isArray(row)||row.length<cols)return;const regId=row[dateIdx]||`fid-${Date.now()}-${idx}`;const ldapQ=row[1]||'';const caso=row[caseIdx]||'N/A';const escData=JSON.stringify(row).replace(/'/g,"&apos;").replace(/"/g,"&quot;");let html=`<tr data-registro-id="${regId.replace(/"/g,'&quot;')}" data-ldap-qa="${ldapQ.replace(/"/g,'&quot;')}" data-caso-num="${caso.replace(/"/g,'&quot;')}" data-row-data='${escData}'>`;for(let i=0;i<cols;i++){const d=row[i];const v=d!=null?String(d):'';let cls=(i===9||i===10)?'text-center':'';html+=`<td class="${cls}">${v}</td>`;}if(showActions){const btnId=`btn-edit-qa-${regId.replace(/[^a-zA-Z0-9-_]/g,'')}`;const safeCaso=String(caso).replace(/'/g,"&apos;").replace(/"/g,"&quot;");const safeRegId=String(regId).replace(/'/g,"&apos;").replace(/"/g,"&quot;");html+=`<td class="qa-actions-col"><button class="btn-edit" id="${btnId}" onclick="abrirPopupEdicionQA('${safeRegId}','${safeCaso}')" title="Editar"><i class="fas fa-edit icon"></i>Editar</button></td>`;}html+="</tr>";body.innerHTML+=html;});renderQaPaginationControls(total,itemsPerPageQA);}
+    function renderQaPaginationControls(total,perPage){const ctrls=document.getElementById("qaPaginationControls");if(!ctrls)return;ctrls.innerHTML='';const pages=Math.ceil(total/perPage);if(pages<=1){if(total>0)ctrls.innerHTML=`<span class="pagination-info">Mostrando ${total} de ${total}</span>`;return;}let html=`<button onclick="changeQaPage(${qaCurrentPage-1})" ${qaCurrentPage===1?'disabled':''} title="Anterior"><i class="fas fa-chevron-left"></i></button>`;const showP=new Set([1,pages,qaCurrentPage,qaCurrentPage-1,qaCurrentPage+1,qaCurrentPage-2,qaCurrentPage+2]);const sortedP=Array.from(showP).filter(p=>p>=1&&p<=pages).sort((a,b)=>a-b);let lastP=0;sortedP.forEach(p=>{if(p>lastP+1)html+='<span style="margin:0 5px;">...</span>';html+=`<button onclick="changeQaPage(${p})" class="${p===qaCurrentPage?'active':''}">${p}</button>`;lastP=p;});if(lastP<pages&&!sortedP.includes(pages)){if(pages>lastP+1)html+='<span style="margin:0 5px;">...</span>';html+=`<button onclick="changeQaPage(${pages})">${pages}</button>`;}html+=`<button onclick="changeQaPage(${qaCurrentPage+1})" ${qaCurrentPage===pages?'disabled':''} title="Siguiente"><i class="fas fa-chevron-right"></i></button>`;const start=(qaCurrentPage-1)*perPage+1;const end=Math.min(start+perPage-1,total);html+=`<span class="pagination-info">Mostrando ${start}-${end} de ${total}</span>`;ctrls.innerHTML=html;}
+    function changeQaPage(page){const pages=Math.ceil(currentFilteredQaData.length/itemsPerPageQA);if(page>=1&&page<=pages){qaCurrentPage=page;displayQaPage(currentFilteredQaData);document.querySelector('#qa .table-container')?.scrollIntoView({behavior:'smooth'});}}
+    function abrirPopupEdicionQA(regId,casoNum){const decRegId=regId.replace(/&apos;/g,"'").replace(/&quot;/g,'"');const decCasoNum=casoNum.replace(/&apos;/g,"'").replace(/&quot;/g,'"');if(!currentUser||(currentUser.rol!=='Administrador'&&currentUser.rol!=='QS')){Swal.fire("Denegado","Solo Admin/QS pueden editar.","error");return;}const escCssRegId=CSS.escape(decRegId);const escCssCasoNum=CSS.escape(decCasoNum);const rowEl=document.querySelector(`#qaTableBody tr[data-registro-id="${escCssRegId}"][data-caso-num="${escCssCasoNum}"]`);if(!rowEl){Swal.fire("Error","Fila no encontrada.","error");return;}let cEst='',cResp='',cForm='',cMeli='';const ldapQ=rowEl.getAttribute('data-ldap-qa')||'?';let rowData=null;try{const escData=rowEl.getAttribute('data-row-data');const rowStr=escData.replace(/&apos;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');rowData=JSON.parse(rowStr);if(!Array.isArray(rowData)||rowData.length<11)throw new Error("Datos QA inválidos.");cEst=rowData[6]!=null?String(rowData[6]):'';cResp=rowData[8]!=null?String(rowData[8]):'';cForm=rowData[9]!=null?String(rowData[9]):'';cMeli=rowData[10]!=null?String(rowData[10]):'';}catch(e){Swal.fire("Error","No se leyeron datos actuales.","error");return;}const safeEst=cEst.replace(/"/g,"&quot;").replace(/</g,'&lt;').replace(/>/g,'&gt;');const safeResp=cResp.replace(/</g,'&lt;').replace(/>/g,'&gt;');let html=`<div style="text-align:left;"><p><strong>ID(Fecha):</strong> ${decRegId}</p><p><strong># Caso:</strong> ${decCasoNum} / <strong>Registró:</strong> ${ldapQ}</p><hr><label class="swal-label">Estado:</label><input id="swal-estado" class="swal-input" value="${safeEst}"><label class="swal-label">Respuesta:</label><textarea id="swal-respuesta" class="swal-input" rows="4">${safeResp}</textarea><div class="swal-qa-grid"><div><label class="swal-label">Visto Formación:</label><select id="swal-formacion" class="swal-select"><option value="" ${cForm===''?'selected':''}>...</option><option value="Sí" ${cForm==='Sí'?'selected':''}>Sí</option><option value="No" ${cForm==='No'?'selected':''}>No</option></select></div><div><label class="swal-label">Visto Meli:</label><select id="swal-meli" class="swal-select"><option value="" ${cMeli===''?'selected':''}>...</option><option value="Sí" ${cMeli==='Sí'?'selected':''}>Sí</option><option value="No" ${cMeli==='No'?'selected':''}>No</option></select></div></div></div>`;Swal.fire({title:`Editar QA #${decCasoNum}`,html:html,confirmButtonText:'<i class="fas fa-save icon"></i> Guardar',cancelButtonText:'<i class="fas fa-times icon"></i> Cancelar',showCancelButton:true,width:'700px',didOpen:()=>{document.getElementById('swal-respuesta')?.focus();},preConfirm:()=>({nEst:document.getElementById('swal-estado').value,nResp:document.getElementById('swal-respuesta').value,vForm:document.getElementById('swal-formacion').value,vMeli:document.getElementById('swal-meli').value})}).then(res=>{if(res.isConfirmed&&res.value){const{nEst,nResp,vForm,vMeli}=res.value;Swal.fire({title:'Guardando...',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});google.script.run.withSuccessHandler(msg=>{Swal.close();const idxOrig=currentQaData.findIndex(it=>it[0]===decRegId&&it[3]===decCasoNum);if(idxOrig>-1){currentQaData[idxOrig][6]=nEst;currentQaData[idxOrig][8]=nResp;currentQaData[idxOrig][9]=vForm;currentQaData[idxOrig][10]=vMeli;if(String(nEst).trim()||String(nResp).trim()){currentQaData[idxOrig][7]=getCurrentFormattedTimestampCliente();}else{currentQaData[idxOrig][7]="";}}const currentSearch=document.getElementById('qaSearchInput')?.value||'';filterAndDisplayQaData(currentSearch);Swal.fire({icon:'success',title:'Actualizado!',text:msg,toast:true,position:'top-end',showConfirmButton:false,timer:3500});setTimeout(()=>{const updRow=document.querySelector(`#qaTableBody tr[data-registro-id="${escCssRegId}"][data-caso-num="${escCssCasoNum}"]`);if(updRow){updRow.style.backgroundColor='#d4edda';setTimeout(()=>{if(updRow.style)updRow.style.backgroundColor='';},2500);}},100);}).withFailureHandler(err=>{Swal.close();Swal.fire('Error',`No se guardaron cambios.<br><i>${err.message}</i>`,'error');}).actualizarRegistroQA(decRegId,nEst,nResp,vForm,vMeli,decCasoNum);}});}
+    function pollForQaUpdates() { if (!currentUser||currentUser.rol!=='QA'){if(pollingIntervalId){clearInterval(pollingIntervalId);pollingIntervalId=null;}return;} google.script.run.withSuccessHandler(processQaUpdates).withFailureHandler(e=>console.error("Error polling:",e)).checkForQaUpdatesForUser(currentUser.username); }
+    function processQaUpdates(updates) { if (!updates||!Array.isArray(updates))return; const newCases=[]; updates.forEach(upd=>{if(upd&&upd.id&&!notifiedResolvedQACases.has(upd.id)){newCases.push(upd);notifiedResolvedQACases.add(upd.id);}}); if(newCases.length>0){console.log(`Notificando ${newCases.length} casos QA.`);let html=`Hola <strong>${currentUser.nombre}</strong>, tienes ${newCases.length===1?'1 nueva respuesta':`${newCases.length} nuevas respuestas`} QA:<br><ul>`;newCases.forEach(c=>{html+=`<li>#<b>${c.numero||'?'}</b> (Equipo: ${c.team||'?'})</li>`;});html+="</ul><p>Ver detalles en 'Seguimiento QA'.</p>";Swal.fire('Nuevas Respuestas QA',html,'info');} }
+    function initializeDashboard() {
+        console.log("Inicializando:", currentUser.rol);
+        if (!currentUser) return;
+        const esAdmin = currentUser.rol === 'Administrador';
+        const esQA = currentUser.rol === 'QA';
+        const esQS = currentUser.rol === 'QS';
+
+        // Actualizar métricas al inicializar
+        updateMetrics();
+
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>{c.style.display='none';c.classList.remove('active');});
+        document.getElementById('qaFormContainer').style.display='none';
+        const asignBtn=document.querySelector('.tab-button[data-tab-target="asignaciones"]');
+        const qaBtn=document.querySelector('.tab-button[data-tab-target="qa"]');
+        if(esAdmin||esQA){
+            if(document.getElementById("ldapSelect"))loadDropdown("getLDAPUsers","ldapSelect","Seleccione LDAP");
+            if(document.getElementById("teamSelect"))loadDropdown("getTeams","teamSelect","Seleccione Equipo");
+        }
+        let defTab='asignaciones';
+        let defBtn=asignBtn;
+        if(esQS){defTab='qa';defBtn=qaBtn;}
+        if(defBtn&&defBtn.style.display!=='none'){openTab({currentTarget:defBtn},defTab);}
+        else{const firstVisible=document.querySelector('.tab-button:not([style*="display: none"])');
+            if(firstVisible){const fallback=firstVisible.getAttribute('data-tab-target'); openTab({currentTarget:firstVisible},fallback);}
+            else{console.error("Ninguna pestaña visible.");}
+        }
+        console.log("Dashboard inicializado.");
+    }
+
+    function updateMetrics() {
+        const metricElements = {
+            totalCasos: document.getElementById('totalCasosAsignados'),
+            casosHoy: document.getElementById('casosAsignadosHoy'),
+            casosPendientes: document.getElementById('casosPendientes'),
+            erroresGestion: document.getElementById('erroresGestion'),
+            conductasInadecuadas: document.getElementById('conductasInadecuadas')
+        };
+
+        // Mostrar loading en todas las métricas
+        Object.values(metricElements).forEach(el => {
+            if (el) el.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        });
+
+        google.script.run
+            .withSuccessHandler(metrics => {
+                if (metrics) {
+                    metricElements.totalCasos.textContent = metrics.totalCasos;
+                    metricElements.casosHoy.textContent = metrics.casosHoy;
+                    metricElements.casosPendientes.textContent = metrics.casosPendientes;
+                    metricElements.erroresGestion.textContent = metrics.erroresGestion;
+                    metricElements.conductasInadecuadas.textContent = metrics.conductasInadecuadas;
+                }
+            })
+            .withFailureHandler(error => {
+                console.error('Error al obtener métricas:', error);
+                Object.values(metricElements).forEach(el => {
+                    if (el) el.textContent = 'Error';
+                });
+            })
+            .getMetricsData();
+    }
+
+    // Agregar actualización de métricas al refrescar datos
+    function refreshCurrentTabData() {
+        const activeTabButton = document.querySelector('.tab-button.active');
+        if (!activeTabButton) return;
+        const tabTarget = activeTabButton.getAttribute('data-tab-target');
+        console.log(`Refrescando ${tabTarget}...`);
+        setRefreshButtonState(true);
+
+        // Actualizar métricas al refrescar
+        updateMetrics();
+
+        switch (tabTarget) {
+            case 'asignaciones':
+                const ldapSelect = document.getElementById("ldapSelect"); const teamSelect = document.getElementById("teamSelect");
+                if (ldapSelect && teamSelect && ldapSelect.value && teamSelect.value) { ldapSelect.disabled = true; teamSelect.disabled = true; loadAssignments(ldapSelect.value, teamSelect.value); }
+                else { const body = document.getElementById("dataTableBody"); const header = document.querySelector("#dataTable thead"); if (body) { let colspan = header?.rows[0]?.cells.length || 13; body.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Seleccione usuario y equipo.</td></tr>`; } if (header) header.innerHTML = ''; document.getElementById("asignacionesSearchInput")?.setAttribute('disabled', 'true'); setRefreshButtonState(false); }
+                break;
+            case 'qa': const qaForm = document.getElementById('qaFormContainer'); if (qaForm) qaForm.style.display = 'none'; cargarRegistrosDesdeSheetsQA(); break;
+            default: console.error(`Pestaña desconocida: ${tabTarget}`); setRefreshButtonState(false); break;
+        }
+    }
+    document.addEventListener("DOMContentLoaded", function() { console.log("DOM cargado."); document.getElementById('loginContainer').style.display = 'block'; document.getElementById('dashboardContainer').style.display = 'none'; const usernameInput = document.getElementById('usernameInput'); if(usernameInput) { usernameInput.addEventListener('keypress', function(event) { if (event.key === 'Enter') { event.preventDefault(); handleLogin(); } }); usernameInput.focus(); } const toggleButton = document.getElementById('toggleQaFormButton'); const closeButton = document.getElementById('closeQaForm'); const qaFormContainer = document.getElementById('qaFormContainer'); if (toggleButton && qaFormContainer) { toggleButton.addEventListener('click', () => { if (qaFormContainer.style.display === 'none') { qaFormContainer.style.display = 'block'; qaFormContainer.scrollIntoView({ behavior: 'smooth'}); } }); } if (closeButton && qaFormContainer) { closeButton.addEventListener('click', () => { qaFormContainer.style.display = 'none'; limpiarFormularioQA(); }); } const qaSearchInput = document.getElementById('qaSearchInput'); if (qaSearchInput) { qaSearchInput.addEventListener('input', function() { filterAndDisplayQaData(this.value); }); } const asignacionesSearchInput = document.getElementById('asignacionesSearchInput'); if (asignacionesSearchInput) { asignacionesSearchInput.addEventListener('input', function() { filterAsignacionesTable(this.value); }); } });
+  </script>
+</body>
+</html>
