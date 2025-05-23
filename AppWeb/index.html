@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+.<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -686,110 +686,21 @@
             }
         });
     }
-    function abrirModalConfirmacionGestion(rowId, team, ldap, caseNumber, interactionId) {
-    const htmlContent = `
-  <p style="text-align: center; margin-bottom: 20px;">
-    Confirma por favor si hubo marcación en:
-  </p>
-
-  <h4 class="swal-gestion-subtitle">Matriz de Faltas - Error de Gestión:</h4>
-  <ul class="swal-gestion-list">
-    <li>
-      <input type="checkbox" id="eg-EG1" value="EG1">
-      <label for="eg-EG1">EG1 - Gestión incorrecta - no hecha</label>
-    </li>
-    <li>
-      <input type="checkbox" id="eg-EG2" value="EG2">
-      <label for="eg-EG2">EG2 - Respuesta Incorrecta - Incompleta</label>
-    </li>
-    <li>
-      <input type="checkbox" id="eg-EG3" value="EG3">
-      <label for="eg-EG3">EG3 - Ampliación de consulta o pedido de datos incorrecto</label>
-    </li>
-    <li>
-      <input type="checkbox" id="eg-EG4" value="EG4">
-      <label for="eg-EG4">EG4 - Clasificación de proceso incorrecto</label>
-    </li>
-    <li>
-      <input type="checkbox" id="eg-EG5" value="EG5">
-      <label for="eg-EG5">EG5 - [SHS] Desvíos Regulatorios y de Plazos</label>
-    </li>
-    <li>
-      <input type="checkbox" id="eg-CasoNA" value="Caso N/A">
-      <label for="eg-CasoNA">Caso N/A - Cerrado como "No auditable" (Acción no auditable)</label>
-    </li>
-    <li>
-      <input type="checkbox" id="eg-CerradoNASOEG" value="Cerrado N/A-SO-EG">
-      <label for="eg-CerradoNASOEG">Cerrado N/A-SO-EG - (No evaluaste ningun Picklist o Subpicklist)</label>
-    </li>
-  </ul>
-
-  <div style="height: 20px;"></div>
-
-  <h4 class="swal-gestion-subtitle">Matriz de Faltas - Conducta Inadecuada:</h4>
-  <ul class="swal-gestion-list">
-    <li>
-      <input type="checkbox" id="ci-CI1" value="CI1">
-      <label for="ci-CI1">CI1 - Genera promesa o expectativa indebida</label>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CI2" value="CI2">
-      <label for="ci-CI2">CI2 - CSR cuando no corresponde</label>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CI3" value="CI3">
-      <label for="ci-CI3">CI3 - Derivación incorrecta cuando CDU corresponde a su equipo</label>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CI4" value="CI4">
-      <label for="ci-CI4">CI4 - Habla mal de MeLi, y todas las entidades asociadas</label>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CI5" value="CI5">
-      <label for="ci-CI5">CI5 - Infracción legal</label>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CI6" value="CI6">
-      <label for="ci-CI6">CI6 - Bonifica o realiza acciones que generan bonificación incorrectamente</label>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CI7" value="CI7">
-      <label for="ci-CI7">CI7 - Particularidades</label>
-    </li>
-    <li>
-      <label style="font-weight: bold; display:block; margin-bottom: 5px;">
-        CI - TL - ¿La Conducta Inadecuada tiene un Visto con TL?
-      </label>
-      <div class="ci-tl-group">
-        <input type="checkbox" id="ci_tl_si" value="Si">
-        <label for="ci-tl-si">Si</label>
-        <input type="checkbox" id="ci_tl_no" value="No">
-        <label for="ci-tl-no">No</label>
-      </div>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CasoNACI" value="Caso N/A-CI">
-      <label for="ci-CasoNACI">Caso N/A-CI - Cerrado como "No auditable" (Acción no auditable)</label>
-    </li>
-    <li>
-      <input type="checkbox" id="ci-CasoSOCI" value="Caso SO - Cerrado N/A-SO-CI">
-      <label for="ci-CasoSOCI">Caso SO - Cerrado N/A-SO-CI (No evaluaste ningun Picklist o Subpicklist)</label>
-    </li>
-  </ul>
-`;
+ function abrirModalConfirmacionGestion(rowId, team, ldap, caseNumber, interactionId) {
+        const htmlContent = `<p style="text-align: center; margin-bottom: 20px;">Confirma por favor si hubo marcación en:</p><h4 class="swal-gestion-subtitle">Matriz de Faltas - Error de Gestión:</h4><ul class="swal-gestion-list"><li><input type="checkbox" id="eg-EG1" value="EG1"><label for="eg-EG1">EG1 - Gestión incorrecta - no hecha</label></li><li><input type="checkbox" id="eg-EG2" value="EG2"><label for="eg-EG2">EG2 - Respuesta Incorrecta - Incompleta</label></li><li><input type="checkbox" id="eg-EG3" value="EG3"><label for="eg-EG3">EG3 - Ampliación de consulta o pedido de datos incorrecto</label></li><li><input type="checkbox" id="eg-EG4" value="EG4"><label for="eg-EG4">EG4 - Clasificación de proceso incorrecto</label></li><li><input type="checkbox" id="eg-EG5" value="EG5"><label for="eg-EG5">EG5 - [SHS] Desvíos Regulatorios y de Plazos</label></li><li><input type="checkbox" id="eg-CasoNA" value="Caso N/A"><label for="eg-CasoNA">Caso N/A - Cerrado como "No auditable" (Acción no auditable)</label></li><li><input type="checkbox" id="eg-CerradoNASOEG" value="Cerrado N/A-SO-EG"><label for="eg-CerradoNASOEG">Cerrado N/A-SO-EG - (No evaluaste ningun Picklist o Subpicklist)</label></li></ul><div style="height: 20px;"></div><h4 class="swal-gestion-subtitle">Matriz de Faltas - Conducta Inadecuada:</h4><ul class="swal-gestion-list"><li><input type="checkbox" id="ci-CI1" value="CI1"><label for="ci-CI1">CI1 - Genera promesa o expectativa indebida</label></li><li><input type="checkbox" id="ci-CI2" value="CI2"><label for="ci-CI2">CI2 - CSR cuando no corresponde</label></li><li><input type="checkbox" id="ci-CI3" value="CI3"><label for="ci-CI3">CI3 - Derivación incorrecta cuando CDU corresponde a su equipo</label></li><li><input type="checkbox" id="ci-CI4" value="CI4"><label for="ci-CI4">CI4 - Habla mal de MeLi, y todas las entidades asociadas</label></li><li><input type="checkbox" id="ci-CI5" value="CI5"><label for="ci-CI5">CI5 - Infracción legal</label></li><li><input type="checkbox" id="ci-CI6" value="CI6"><label for="ci-CI6">CI6 - Bonifica o realiza acciones que generan bonificación incorrectamente</label></li><li><input type="checkbox" id="ci-CI7" value="CI7"><label for="ci-CI7">CI7 - Particularidades</label></li><li><label style="font-weight: bold; display:block; margin-bottom: 5px;">CI - TL - ¿La Conducta Inadecuada tiene un Visto con TL?</label><div class="ci-tl-group"><input type="checkbox" id="ci-tl-si" value="Si"><label for="ci-tl-si">Si</label><input type="checkbox" id="ci-tl-no" value="No"><label for="ci-tl-no">No</label></div></li><li><input type="checkbox" id="ci-CasoNACI" value="Caso N/A-CI"><label for="ci-CasoNACI">Caso N/A-CI - Cerrado como "No auditable" (Acción no auditable)</label></li><li><input type="checkbox" id="ci-CasoSOCI" value="Caso SO - Cerrado N/A-SO-CI"><label for="ci-CasoSOCI">Caso SO - Cerrado N/A-SO-CI (No evaluaste ningun Picklist o Subpicklist)</label></li></ul>`;
         Swal.fire({ title: 'Confirma tu Gestión', html: htmlContent, showCloseButton: true, showCancelButton: false, confirmButtonText: '<i class="fas fa-save icon"></i> Guardar Marcas', confirmButtonColor: '#3085d6', width: '750px',
-            didOpen: () => { const siCheckbox = Swal.getPopup().querySelector('#ci_tl_si'); const noCheckbox = Swal.getPopup().querySelector('#ci_tl_no'); siCheckbox.addEventListener('change', () => { if (siCheckbox.checked) noCheckbox.checked = false; }); noCheckbox.addEventListener('change', () => { if (noCheckbox.checked) siCheckbox.checked = false; }); },
+            didOpen: () => { const siCheckbox = Swal.getPopup().querySelector('#ci-tl-si'); const noCheckbox = Swal.getPopup().querySelector('#ci-tl-no'); siCheckbox.addEventListener('change', () => { if (siCheckbox.checked) noCheckbox.checked = false; }); noCheckbox.addEventListener('change', () => { if (noCheckbox.checked) siCheckbox.checked = false; }); },
             preConfirm: () => {
-                const marcasEG = []; const egCheckboxes = Swal.getPopup().querySelectorAll('input[id^="eg_"]:checked'); egCheckboxes.forEach(cb => marcasEG.push(cb.value));
-                const marcasCI = []; const ciCheckboxes = Swal.getPopup().querySelectorAll('input[id^="ci_"]:not(#ci_tl_si):not(#ci_tl_no):checked'); ciCheckboxes.forEach(cb => marcasCI.push(cb.value));
-                const ciTlSiChecked = Swal.getPopup().querySelector('#ci_tl_si').checked; const ciTlNoChecked = Swal.getPopup().querySelector('#ci_tl_no').checked;
-                if (ciTlSiChecked && ciTlNoChecked) { Swal.showValidationMessage('Seleccione solo "Si" o "No" para CI_TL.'); return false; }
-                if (ciTlSiChecked) { marcasCI.push('TL/Si'); } else if (ciTlNoChecked) { marcasCI.push('TL/No'); }
+                const marcasEG = []; const egCheckboxes = Swal.getPopup().querySelectorAll('input[id^="eg-"]:checked'); egCheckboxes.forEach(cb => marcasEG.push(cb.value));
+                const marcasCI = []; const ciCheckboxes = Swal.getPopup().querySelectorAll('input[id^="ci-"]:not(#ci-tl-si):not(#ci-tl-no):checked'); ciCheckboxes.forEach(cb => marcasCI.push(cb.value));
+                const ciTlSiChecked = Swal.getPopup().querySelector('#ci-tl-si').checked; const ciTlNoChecked = Swal.getPopup().querySelector('#ci-tl-no').checked;
+                if (ciTlSiChecked && ciTlNoChecked) { Swal.showValidationMessage('Seleccione solo "Si" o "No" para CI-TL.'); return false; }
+                if (ciTlSiChecked) { marcasCI.push('CI - TL/Si'); } else if (ciTlNoChecked) { marcasCI.push('CI - TL/No'); }
                 return { marcasEG, marcasCI };
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                const { marcasEG, marcasCI } = result.value; console.log(`Guardando marcas para Caso ${caseNumber} (Int: ${interactionId}) - EG: [${marcasEG.join('; ')}], CI: [${marcasCI.join('; ')}]`);
+                const { marcasEG, marcasCI } = result.value; console.log(`Guardando marcas para Caso ${caseNumber} (Int: ${interactionId}) - EG: [${marcasEG.join(', ')}], CI: [${marcasCI.join(', ')}]`);
                 Swal.fire({ title: 'Guardando Marcas...', text: 'Por favor espera.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
                 google.script.run.withSuccessHandler(response => { Swal.fire({ icon: 'success', title: '¡Guardado!', text: response, timer: 2500, timerProgressBar: true, showConfirmButton: false }); })
                     .withFailureHandler(error => { console.error("Error al guardar marcas:", error); Swal.fire({ icon: 'error', title: 'Error al Guardar', html: `No se pudieron guardar las marcas.<br><i>${error.message}</i>` }); })

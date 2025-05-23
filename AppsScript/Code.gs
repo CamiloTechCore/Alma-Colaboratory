@@ -1,91 +1,4 @@
 /**
- * Consolida los datos de la columna B (desde B2 hacia abajo) de varias hojas fuente
- * en la columna B de la hoja 'Analityscs_DB', formateando los datos como texto.
- */
-function consolidarDatosColumnaB() {
-  // Obtiene el libro de cálculo activo.
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // Nombres de las hojas de donde se extraerán los datos.
-  const nombresHojasFuente = [
-    'FBM',
-    'DISTRIBUCION',
-    'PRE_DESPACHO',
-    'VIAJE_DEL_PAQUETE',
-    'REDES',
-    'KANGU'
-  ];
-
-  // Nombre de la hoja destino donde se pegarán los datos.
-  const nombreHojaDestino = 'Analityscs_DB';
-  // Celda de inicio en la hoja destino (columna B, fila 2).
-  const columnaDestino = 2; // Columna B
-  const filaInicioDestino = 2; // Fila 2
-
-  // Array para almacenar todos los datos recolectados.
-  let todosLosDatos = [];
-
-  // Itera sobre cada nombre de hoja fuente.
-  nombresHojasFuente.forEach(nombreHoja => {
-    const hojaFuente = ss.getSheetByName(nombreHoja);
-    if (hojaFuente) {
-      // Determina la última fila con contenido en la hoja fuente.
-      const ultimaFilaFuente = hojaFuente.getLastRow();
-
-      // Solo procesa si hay datos más allá de la fila 1.
-      if (ultimaFilaFuente >= filaInicioDestino) {
-        // Obtiene los valores de la columna B (columna 2), desde la fila 2 hasta la última fila con datos.
-        const rangoValores = hojaFuente.getRange(filaInicioDestino, columnaDestino, ultimaFilaFuente - filaInicioDestino + 1, 1).getValues();
-        
-        // Filtra las filas donde la celda B no esté vacía y convierte el valor a String.
-        const datosDeHoja = rangoValores
-          .filter(fila => fila[0] !== null && fila[0] !== undefined && fila[0].toString().trim() !== "")
-          .map(fila => [String(fila[0])]); // Asegura que cada valor sea un String.
-
-        // Si se encontraron datos en la hoja actual, los añade al array general.
-        if (datosDeHoja.length > 0) {
-          todosLosDatos = todosLosDatos.concat(datosDeHoja);
-        }
-      }
-    } else {
-      // Registra una advertencia si una hoja fuente no se encuentra (no interrumpe el script).
-      console.warn(`La hoja fuente "${nombreHoja}" no fue encontrada.`);
-    }
-  });
-
-  // Obtiene la hoja destino.
-  const hojaDestino = ss.getSheetByName(nombreHojaDestino);
-  if (!hojaDestino) {
-    SpreadsheetApp.getUi().alert(`La hoja destino "${nombreHojaDestino}" no fue encontrada. No se realizó ninguna acción.`);
-    return; // Termina la ejecución si la hoja destino no existe.
-  }
-
-  // Limpia el contenido y formato previo en la columna B de la hoja destino, desde B2 hacia abajo.
-  // Se limpia desde la fila de inicio hasta el máximo de filas de la hoja para asegurar una limpieza completa.
-  if (hojaDestino.getMaxRows() >= filaInicioDestino) {
-    hojaDestino.getRange(filaInicioDestino, columnaDestino, hojaDestino.getMaxRows() - filaInicioDestino + 1, 1)
-      .clearContent()
-      .clearFormat();
-  }
-
-  // Si se recolectaron datos de las hojas fuente.
-  if (todosLosDatos.length > 0) {
-    // Escribe los nuevos datos en la hoja destino.
-    // Establece el formato de número de las celdas a '@' (Texto) antes de escribir los valores.
-    hojaDestino.getRange(filaInicioDestino, columnaDestino, todosLosDatos.length, 1)
-      .setNumberFormat('@') 
-      .setValues(todosLosDatos);
-    SpreadsheetApp.getUi().alert(`Datos consolidados y formateados como texto en la hoja "${nombreHojaDestino}" (Columna B).`);
-  } else {
-    // Si no se encontraron datos, informa al usuario. La hoja destino ya fue limpiada.
-    SpreadsheetApp.getUi().alert('No se encontraron datos en las hojas fuente para consolidar.');
-  }
-}
-
-
-
-
-/**
  * @OnlyCurrentDoc
  */
 
@@ -729,5 +642,89 @@ function getSheetByTeam(team) {
   } catch (e) {
     Logger.log(`Error en getSheetByTeam para equipo '${team}': ${e.message}`);
     return null;
+  }
+}
+
+  /**
+ * Consolida los datos de la columna B (desde B2 hacia abajo) de varias hojas fuente
+ * en la columna B de la hoja 'Analityscs_DB', formateando los datos como texto.
+ */
+function consolidarDatosColumnaB() {
+  // Obtiene el libro de cálculo activo.
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Nombres de las hojas de donde se extraerán los datos.
+  const nombresHojasFuente = [
+    'FBM',
+    'DISTRIBUCION',
+    'PRE_DESPACHO',
+    'VIAJE_DEL_PAQUETE',
+    'REDES',
+    'KANGU'
+  ];
+
+  // Nombre de la hoja destino donde se pegarán los datos.
+  const nombreHojaDestino = 'Analityscs_DB';
+  // Celda de inicio en la hoja destino (columna B, fila 2).
+  const columnaDestino = 2; // Columna B
+  const filaInicioDestino = 2; // Fila 2
+
+  // Array para almacenar todos los datos recolectados.
+  let todosLosDatos = [];
+
+  // Itera sobre cada nombre de hoja fuente.
+  nombresHojasFuente.forEach(nombreHoja => {
+    const hojaFuente = ss.getSheetByName(nombreHoja);
+    if (hojaFuente) {
+      // Determina la última fila con contenido en la hoja fuente.
+      const ultimaFilaFuente = hojaFuente.getLastRow();
+
+      // Solo procesa si hay datos más allá de la fila 1.
+      if (ultimaFilaFuente >= filaInicioDestino) {
+        // Obtiene los valores de la columna B (columna 2), desde la fila 2 hasta la última fila con datos.
+        const rangoValores = hojaFuente.getRange(filaInicioDestino, columnaDestino, ultimaFilaFuente - filaInicioDestino + 1, 1).getValues();
+        
+        // Filtra las filas donde la celda B no esté vacía y convierte el valor a String.
+        const datosDeHoja = rangoValores
+          .filter(fila => fila[0] !== null && fila[0] !== undefined && fila[0].toString().trim() !== "")
+          .map(fila => [String(fila[0])]); // Asegura que cada valor sea un String.
+
+        // Si se encontraron datos en la hoja actual, los añade al array general.
+        if (datosDeHoja.length > 0) {
+          todosLosDatos = todosLosDatos.concat(datosDeHoja);
+        }
+      }
+    } else {
+      // Registra una advertencia si una hoja fuente no se encuentra (no interrumpe el script).
+      console.warn(`La hoja fuente "${nombreHoja}" no fue encontrada.`);
+    }
+  });
+
+  // Obtiene la hoja destino.
+  const hojaDestino = ss.getSheetByName(nombreHojaDestino);
+  if (!hojaDestino) {
+    SpreadsheetApp.getUi().alert(`La hoja destino "${nombreHojaDestino}" no fue encontrada. No se realizó ninguna acción.`);
+    return; // Termina la ejecución si la hoja destino no existe.
+  }
+
+  // Limpia el contenido y formato previo en la columna B de la hoja destino, desde B2 hacia abajo.
+  // Se limpia desde la fila de inicio hasta el máximo de filas de la hoja para asegurar una limpieza completa.
+  if (hojaDestino.getMaxRows() >= filaInicioDestino) {
+    hojaDestino.getRange(filaInicioDestino, columnaDestino, hojaDestino.getMaxRows() - filaInicioDestino + 1, 1)
+      .clearContent()
+      .clearFormat();
+  }
+
+  // Si se recolectaron datos de las hojas fuente.
+  if (todosLosDatos.length > 0) {
+    // Escribe los nuevos datos en la hoja destino.
+    // Establece el formato de número de las celdas a '@' (Texto) antes de escribir los valores.
+    hojaDestino.getRange(filaInicioDestino, columnaDestino, todosLosDatos.length, 1)
+      .setNumberFormat('@') 
+      .setValues(todosLosDatos);
+    SpreadsheetApp.getUi().alert(`Datos consolidados y formateados como texto en la hoja "${nombreHojaDestino}" (Columna B).`);
+  } else {
+    // Si no se encontraron datos, informa al usuario. La hoja destino ya fue limpiada.
+    SpreadsheetApp.getUi().alert('No se encontraron datos en las hojas fuente para consolidar.');
   }
 }
