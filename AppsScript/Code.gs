@@ -23,6 +23,7 @@ var COL_TIPO_ACCION = "Tipo de accion";
 // *** NUEVAS COLUMNAS DE GESTIÓN ***
 var COL_MARCA_EG = "Marca de EG"; // Nueva columna N
 var COL_MARCA_CI = "Marca de CI"; // Nueva columna O
+var COL_ESTADO_CASO = "Estado_caso"; // Nueva columna para estado del caso
 
 
 // --- Columnas Esperadas QA ---
@@ -469,83 +470,66 @@ function getMetricsData(ldap, simpleDayFilter = null) {
       return null;
     }
 
-    const searchLdap = String(ldap).trim().toLowerCase();
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
     const sheets = ss.getSheets();
-    
     let totalCasos = 0;
     let casosHoy = 0;
     let casosPendientes = 0;
-    let erroresGestion = 0;
+    let casosAperturados = 0;
     let conductasInadecuadas = 0;
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     sheets.forEach(sheet => {
-      const sheetName = sheet.getName();
-      Logger.log(`Procesando hoja: ${sheetName}`);
-
       try {
-        const ldapColIndex = getColumnIndex(sheet, COL_USUARIO_LDAP);
-        if (ldapColIndex === -1) {
-          Logger.log(`Columna LDAP no encontrada en '${sheetName}'. Saltando.`);
-          return;
-        }
+        const data = sheet.getDataRange().getValues();
+        if (data.length < 2) return;
 
-        const simpleDayColIndex = getColumnIndex(sheet, COL_SIMPLE_DAY);
-        const marcaEGColIndex = getColumnIndex(sheet, COL_MARCA_EG);
-        const marcaCIColIndex = getColumnIndex(sheet, COL_MARCA_CI);
+        const headers = data[0];
+        const ldapColIndex = headers.indexOf(COL_USUARIO_LDAP);
+        const fechaColIndex = headers.indexOf(COL_FECHA_ASIGNACION);
+        const estadoColIndex = headers.indexOf(COL_ESTADO_CASO);
+        const marcaCIColIndex = headers.indexOf(COL_MARCA_CI);
 
-        const lastRow = sheet.getLastRow();
-        const headerRow = sheet.getFrozenRows() || 1;
+        if (ldapColIndex === -1) return;
 
-        if (lastRow <= headerRow) {
-          Logger.log(`Hoja '${sheetName}' sin datos.`);
-          return;
-        }
+        data.slice(1).forEach(row => {
+          if (String(row[ldapColIndex]).trim() === String(ldap).trim()) {
+            totalCasos++;
 
-        const data = sheet.getRange(headerRow + 1, 1, lastRow - headerRow, sheet.getLastColumn()).getValues();
+            // Contar casos pendientes
+            if (estadoColIndex !== -1 && String(row[estadoColIndex]).trim().toLowerCase() === "Pendiente") {
+              casosPendientes++;
+            }
 
-        data.forEach(row => {
-          if (row.length > ldapColIndex - 1) {
-            const rowLdap = String(row[ldapColIndex - 1]).trim().toLowerCase();
-            
-            if (rowLdap === searchLdap) {
-              // Verificar si el Simple Day coincide con el filtro
-              if (simpleDayFilter && simpleDayColIndex !== -1) {
-                const rowSimpleDay = String(row[simpleDayColIndex - 1]).trim();
-                if (rowSimpleDay !== simpleDayFilter) return;
+            // Contar casos aperturados
+            if (estadoColIndex !== -1) {
+              const estado = String(row[estadoColIndex]).trim();
+              Logger.log(`Estado del caso: "${estado}"`);
+              if (estado === "Aperturado") {
+                casosAperturados++;
+                Logger.log(`Caso aperturado encontrado. Total: ${casosAperturados}`);
               }
+            }
 
-              totalCasos++;
+            // Contar casos de hoy
+            if (fechaColIndex !== -1 && row[fechaColIndex] instanceof Date) {
+              const fechaAsignacion = new Date(row[fechaColIndex]);
+              fechaAsignacion.setHours(0, 0, 0, 0);
+              if (fechaAsignacion.getTime() === today.getTime()) {
+                casosHoy++;
+              }
+            }
 
-              // Verificar si es caso de hoy usando Simple Day
-              if (simpleDayColIndex !== -1 && row[simpleDayColIndex - 1]) {
-                const simpleDayDate = parseSimpleDayDate(String(row[simpleDayColIndex - 1]));
-                if (simpleDayDate && simpleDayDate.getTime() === hoy.getTime()) {
-                  casosHoy++;
-                }
-              }
-
-              // Verificar si tiene marcas
-              const tieneMarcaEG = marcaEGColIndex !== -1 && row[marcaEGColIndex - 1];
-              const tieneMarcaCI = marcaCIColIndex !== -1 && row[marcaCIColIndex - 1];
-
-              if (!tieneMarcaEG && !tieneMarcaCI) {
-                casosPendientes++;
-              }
-              if (tieneMarcaEG) {
-                erroresGestion++;
-              }
-              if (tieneMarcaCI) {
-                conductasInadecuadas++;
-              }
+            // Contar conductas inadecuadas
+            if (marcaCIColIndex !== -1 && row[marcaCIColIndex]) {
+              conductasInadecuadas++;
             }
           }
         });
       } catch (sheetError) {
-        Logger.log(`Error procesando hoja '${sheetName}': ${sheetError.message}`);
+        Logger.log(`Error procesando hoja ${sheet.getName()}: ${sheetError.message}`);
       }
     });
 
@@ -553,7 +537,7 @@ function getMetricsData(ldap, simpleDayFilter = null) {
       totalCasos: totalCasos,
       casosHoy: casosHoy,
       casosPendientes: casosPendientes,
-      erroresGestion: erroresGestion,
+      casosAperturados: casosAperturados,
       conductasInadecuadas: conductasInadecuadas
     };
 

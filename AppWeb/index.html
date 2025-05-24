@@ -1,4 +1,4 @@
-.<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -313,9 +313,9 @@
             </div>
         </div>
         <div class="metric-card" id="metric-card-eg">
-            <i class="fas fa-exclamation-triangle icon"></i>
+            <i class="fas fa-folder-open icon"></i>
             <div class="metric-content">
-                <h3>Errores de Gestión</h3>
+                <h3>Casos Aperturados</h3>
                 <p class="metric-value" id="metric-errores-gestion">0</p>
             </div>
         </div>
@@ -342,10 +342,6 @@
             <div class="control-group">
               <label for="teamSelect"><i class="fas fa-users-cog icon"></i>Equipo:</label>
               <select id="teamSelect" onchange="handleAssignmentSelectionChange()" disabled> <option value="">Cargando...</option> </select>
-            </div>
-            <div class="control-group">
-              <label for="simpleDaySelect"><i class="fas fa-calendar-day icon"></i>Simple Day:</label>
-              <select id="simpleDaySelect" onchange="handleSimpleDayChange()" disabled> <option value="">Cargando...</option> </select>
             </div>
         </div>
         <div class="asignaciones-header-search-container">
@@ -479,6 +475,10 @@
         }
       });
 
+      // Obtener el equipo seleccionado
+      const teamSelect = document.getElementById('teamSelect');
+      const selectedTeam = teamSelect ? teamSelect.value : null;
+
       // Llamar al backend para obtener las métricas
       google.script.run
         .withSuccessHandler(function(metrics) {
@@ -486,7 +486,7 @@
             document.getElementById('metric-total-casos').textContent = metrics.totalCasos;
             document.getElementById('metric-casos-hoy').textContent = metrics.casosHoy;
             document.getElementById('metric-casos-pendientes').textContent = metrics.casosPendientes;
-            document.getElementById('metric-errores-gestion').textContent = metrics.erroresGestion;
+            document.getElementById('metric-errores-gestion').textContent = metrics.casosAperturados;
             document.getElementById('metric-conductas-inadecuadas').textContent = metrics.conductasInadecuadas;
           } else {
             metricIds.forEach(id => {
@@ -506,7 +506,7 @@
           });
           console.error('Error al cargar métricas:', error);
         })
-        .getMetricsData(ldap, simpleDayFilter);
+        .getMetricsData(ldap, selectedTeam, null); // Siempre enviamos null como simpleDayFilter
     }
 
     function openTab(evt, tabName) {
@@ -763,11 +763,11 @@
 
     function updateMetrics() {
         const metricElements = {
-            totalCasos: document.getElementById('totalCasosAsignados'),
-            casosHoy: document.getElementById('casosAsignadosHoy'),
-            casosPendientes: document.getElementById('casosPendientes'),
-            erroresGestion: document.getElementById('erroresGestion'),
-            conductasInadecuadas: document.getElementById('conductasInadecuadas')
+            totalCasos: document.getElementById('metric-total-casos'),
+            casosHoy: document.getElementById('metric-casos-hoy'),
+            casosPendientes: document.getElementById('metric-casos-pendientes'),
+            casosAperturados: document.getElementById('metric-errores-gestion'),
+            conductasInadecuadas: document.getElementById('metric-conductas-inadecuadas')
         };
 
         // Mostrar loading en todas las métricas
@@ -781,7 +781,7 @@
                     metricElements.totalCasos.textContent = metrics.totalCasos;
                     metricElements.casosHoy.textContent = metrics.casosHoy;
                     metricElements.casosPendientes.textContent = metrics.casosPendientes;
-                    metricElements.erroresGestion.textContent = metrics.erroresGestion;
+                    metricElements.casosAperturados.textContent = metrics.casosAperturados;
                     metricElements.conductasInadecuadas.textContent = metrics.conductasInadecuadas;
                 }
             })
@@ -903,6 +903,10 @@
         // Si hay equipo seleccionado, cargar usuarios
         if (teamSelect && teamSelect.value) {
             loadDropdown("getLDAPUsers", "ldapSelect", "Seleccione usuario LDAP");
+            // Actualizar métricas con el nuevo equipo
+            if (ldapSelect && ldapSelect.value) {
+                loadMetricsData(ldapSelect.value);
+            }
         }
     }
 
@@ -926,9 +930,10 @@
         }
         if (header) header.innerHTML = '';
         
-        // Si hay LDAP y equipo seleccionados, cargar Simple Days
+        // Si hay LDAP y equipo seleccionados, cargar Simple Days y actualizar métricas
         if (ldapSelect && ldapSelect.value && teamSelect && teamSelect.value) {
             loadSimpleDayDropdown();
+            loadMetricsData(ldapSelect.value);
         }
     }
   </script>
