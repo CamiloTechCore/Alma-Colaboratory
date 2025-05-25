@@ -638,3 +638,33 @@ function getSheetByTeam(team) {
     return null;
   }
 }
+
+// --- Nueva función para obtener toda la información de un usuario en todas las hojas ---
+function getUserData(username) {
+  if (!username) return { success: false, message: "Usuario no proporcionado." };
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
+  const result = {};
+
+  ss.getSheets().forEach(sheet => {
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 2) return; // Saltar si solo hay encabezado
+
+    const headers = data[0];
+    // Buscar columna que contenga "usuario" o "user" (insensible a mayúsculas)
+    const userColIndex = headers.findIndex(h => String(h).toLowerCase().includes("usuario") || String(h).toLowerCase().includes("user"));
+    if (userColIndex === -1) return;
+
+    // Filtrar filas que coincidan con el usuario
+    const userRows = data.slice(1).filter(row => String(row[userColIndex]).trim() === String(username).trim());
+
+    if (userRows.length > 0) {
+      result[sheet.getName()] = {
+        headers: headers,
+        rows: userRows
+      };
+    }
+  });
+
+  return { success: true, username: username, data: result };
+}
