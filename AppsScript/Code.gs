@@ -89,30 +89,21 @@ function formatCell(cellValue) {
 function parseGASDateString(dateString) {
   if (!dateString || typeof dateString !== 'string') return null;
   dateString = dateString.trim();
-  let match = dateString.match(/^(\d{2})-(\d{2})-(\d{4}),\s+(\d{2}):(\d{2}):(\d{2})\s+(AM|PM)$/i);
-  if (match) {
-    try {
-      let day = parseInt(match[1], 10);
-      let month = parseInt(match[2], 10) - 1;
-      let year = parseInt(match[3], 10);
-      let hour = parseInt(match[4], 10);
-      let minute = parseInt(match[5], 10);
-      let second = parseInt(match[6], 10);
-      let ampm = match[7].toUpperCase();
-      if (ampm === 'PM' && hour < 12) hour += 12;
-      if (ampm === 'AM' && hour === 12) hour = 0;
-      let dt = new Date(year, month, day, hour, minute, second);
-      if (dt.getFullYear() === year && dt.getMonth() === month && dt.getDate() === day &&
-          dt.getHours() === hour && dt.getMinutes() === minute && dt.getSeconds() === second) {
-          return dt;
-      } else {
-          Logger.log(`Error de validación de componentes al parsear fecha: ${dateString}. Objeto Date resultante: ${dt}`); return null;
-      }
-    } catch (e) {
-      Logger.log(`Error parseando fecha string "${dateString}" en parseGASDateString: ${e}`); return null;
-    }
+  const match = dateString.match(/^(\d{2})-(\d{2})-(\d{4}),\s+(\d{2}):(\d{2}):(\d{2})\s+(AM|PM)$/i);
+  if (!match) return null;
+  
+  try {
+    const [_, day, month, year, hour, minute, second, ampm] = match;
+    let h = parseInt(hour, 10);
+    if (ampm.toUpperCase() === 'PM' && h < 12) h += 12;
+    if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+    
+    const dt = new Date(year, parseInt(month, 10) - 1, parseInt(day, 10), h, parseInt(minute, 10), parseInt(second, 10));
+    return dt.getFullYear() === parseInt(year, 10) ? dt : null;
+  } catch (e) {
+    Logger.log(`Error parseando fecha: ${dateString}`);
+    return null;
   }
-  Logger.log(`Fecha string "${dateString}" no coincide con el formato esperado "dd/M/yyyy; hh:mm:ss a".`); return null;
 }
 
 function parseSimpleDayDate(simpleDayStr) {
@@ -126,14 +117,12 @@ function parseSimpleDayDate(simpleDayStr) {
   const match = simpleDayStr.match(/^(\d{1,2})\s+([a-zA-Z]{3})\s+(\d{4})$/i);
   if (!match) return null;
 
-  const day = parseInt(match[1], 10);
-  const month = months[match[2].toLowerCase()];
-  const year = parseInt(match[3], 10);
+  const [_, day, month, year] = match;
+  const monthIndex = months[month.toLowerCase()];
+  if (monthIndex === undefined) return null;
 
-  if (isNaN(day) || month === undefined || isNaN(year)) return null;
-
-  const date = new Date(year, month, day);
-  return date;
+  const date = new Date(parseInt(year, 10), monthIndex, parseInt(day, 10));
+  return date.getFullYear() === parseInt(year, 10) ? date : null;
 }
 
 function verificarUsuario(username) {
@@ -203,9 +192,9 @@ function getAssignments(ldap, team, simpleDayFilter) {
     Logger.log(`getAssignments: Parámetros inválidos LDAP='${ldap}', Team='${team}'.`); 
     return { headers: [], data: [] }; 
   }
+
   const searchLdap = String(ldap).trim(); 
   const searchTeam = String(team).trim();
-  // Definir el orden y las columnas esperadas
   const columnasEsperadas = [
     COL_FECHA_ASIGNACION,
     COL_INTERACCION,
@@ -223,27 +212,39 @@ function getAssignments(ldap, team, simpleDayFilter) {
     COL_MARCA_EG,
     COL_MARCA_CI
   ];
+
   const sheet = getSheetByTeam(searchTeam);
   if (!sheet) {
     Logger.log(`getAssignments: No se encontró la hoja para el equipo '${searchTeam}'.`);
     return { headers: columnasEsperadas, data: [] };
   }
+
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return { headers: columnasEsperadas, data: [] };
+
   const headers = data[0];
-  const ldapColIndex = headers.indexOf(COL_USUARIO_LDAP);
-  const simpleDayColIndex = headers.indexOf(COL_SIMPLE_DAY);
-  if (ldapColIndex === -1) return { headers: columnasEsperadas, data: [] };
-  // Filtrar filas por LDAP y Simple Day si corresponde
-  let filteredRows = data.slice(1).filter(row => String(row[ldapColIndex]).trim() === searchLdap);
-  if (simpleDayFilter && simpleDayColIndex !== -1) {
-    filteredRows = filteredRows.filter(row => String(row[simpleDayColIndex]).trim() === String(simpleDayFilter).trim());
-  }
-  // Mapear las filas a las columnas esperadas
-  const resultData = filteredRows.map(row => columnasEsperadas.map(col => {
-    const idx = headers.indexOf(col);
-    return idx !== -1 ? row[idx] : '';
-  }));
+  const indices = {
+    ldap: headers.indexOf(COL_USUARIO_LDAP),
+    simpleDay: headers.indexOf(COL_SIMPLE_DAY)
+  };
+
+  if (indices.ldap === -1) return { headers: columnasEsperadas, data: [] };
+
+  const filteredRows = data.slice(1).filter(row => {
+    if (String(row[indices.ldap]).trim() !== searchLdap) return false;
+    if (simpleDayFilter && indices.simpleDay !== -1) {
+      return String(row[indices.simpleDay]).trim() === String(simpleDayFilter).trim();
+    }
+    return true;
+  });
+
+  const resultData = filteredRows.map(row => 
+    columnasEsperadas.map(col => {
+      const idx = headers.indexOf(col);
+      return idx !== -1 ? row[idx] : '';
+    })
+  );
+
   return { headers: columnasEsperadas, data: resultData };
 }
 
@@ -372,32 +373,82 @@ function guardarEnSheetsQA(datos) {
   } catch (e) { Logger.log(`Error guardarEnSheetsQA: ${e.message}`); throw new Error(`Error servidor guardando QA.`); }
 }
 function obtenerRegistrosQA(userInfo) {
+  if (!userInfo?.rol || !userInfo?.username) {
+    Logger.log("obtenerRegistrosQA: userInfo inválido.");
+    return [];
+  }
+
   try {
-    if (!userInfo || !userInfo.rol || !userInfo.username) { Logger.log("obtenerRegistrosQA: userInfo inválido."); return []; }
-    const userRol = userInfo.rol; const usernameLower = userInfo.username.toLowerCase();
-    var hoja = SpreadsheetApp.openById(SPREADSHEET_ID_QA).getSheetByName(QA_SHEET_NAME);
-    if (!hoja) { Logger.log(`Hoja QA no existe.`); return []; }
-    var lastRow = hoja.getLastRow(); var headerRowIndex = hoja.getFrozenRows() || 1;
-    if (lastRow < headerRowIndex + 1) { Logger.log(`Hoja QA vacía.`); return [hoja.getRange(headerRowIndex, 1, 1, hoja.getLastColumn()).getValues()[0].map(cell => formatCell(cell))]; }
-    var dataRange = hoja.getRange(headerRowIndex, 1, lastRow - headerRowIndex + 1, hoja.getLastColumn());
-    var allDataValues = dataRange.getValues(); var allDataDisplayValues = dataRange.getDisplayValues();
-    var header = allDataValues[0]; var dataRows = allDataValues.slice(1); var displayDataRows = allDataDisplayValues.slice(1);
-    const fechaRegIdx = header.map(h => String(h).trim()).indexOf(COL_QA_FECHA_REGISTRO);
-    if (fechaRegIdx > -1) {
-       let combinedData = dataRows.map((row, index) => ({ originalRow: row, displayDateString: (displayDataRows[index] && displayDataRows[index].length > fechaRegIdx) ? displayDataRows[index][fechaRegIdx] : null }));
-       combinedData.sort((a, b) => { const dateA = parseGASDateString(a.displayDateString); const dateB = parseGASDateString(b.displayDateString); if (dateA && dateB) { return dateB.getTime() - dateA.getTime(); } else if (dateB) { return 1; } else if (dateA) { return -1; } return 0; });
-       dataRows = combinedData.map(item => item.originalRow);
-    } else { Logger.log(`Advertencia: Columna "${COL_QA_FECHA_REGISTRO}" no encontrada. No se pudo ordenar.`); }
-    const ldapQaIdx = header.map(h => String(h).trim()).indexOf(COL_QA_LDAP_QA);
-    const vistoMeliIdx = header.map(h => String(h).trim()).indexOf(COL_QA_VISTO_MELI);
-    let filteredDataRows = [];
-    if (userRol === 'Administrador') { filteredDataRows = dataRows; }
-    else if (userRol === 'QA' && ldapQaIdx > -1) { filteredDataRows = dataRows.filter(row => row && row.length > ldapQaIdx && String(row[ldapQaIdx]).trim().toLowerCase() === usernameLower); }
-    else if (userRol === 'QS' && vistoMeliIdx > -1) { filteredDataRows = dataRows.filter(row => row && row.length > vistoMeliIdx && String(row[vistoMeliIdx]).trim().toLowerCase() === 'sí'); }
-    else { Logger.log(`Rol ${userRol} sin filtro QA aplicable.`); filteredDataRows = dataRows; }
-    const resultData = [header.map(cell => formatCell(cell)), ...filteredDataRows.map(row => row.map(cell => formatCell(cell)))];
-    return resultData;
-  } catch (e) { Logger.log(`Error obtenerRegistrosQA: ${e.message} \nStack: ${e.stack}`); return []; }
+    const userRol = userInfo.rol;
+    const usernameLower = userInfo.username.toLowerCase();
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID_QA);
+    const hoja = ss.getSheetByName(QA_SHEET_NAME);
+    
+    if (!hoja) {
+      Logger.log(`Hoja QA no existe.`);
+      return [];
+    }
+
+    const lastRow = hoja.getLastRow();
+    const headerRowIndex = hoja.getFrozenRows() || 1;
+    
+    if (lastRow < headerRowIndex + 1) {
+      Logger.log(`Hoja QA vacía.`);
+      return [hoja.getRange(headerRowIndex, 1, 1, hoja.getLastColumn()).getValues()[0].map(cell => formatCell(cell))];
+    }
+
+    const dataRange = hoja.getRange(headerRowIndex, 1, lastRow - headerRowIndex + 1, hoja.getLastColumn());
+    const [header, ...dataRows] = dataRange.getValues();
+    const displayValues = dataRange.getDisplayValues().slice(1);
+
+    const indices = {
+      fechaReg: header.map(h => String(h).trim()).indexOf(COL_QA_FECHA_REGISTRO),
+      ldapQa: header.map(h => String(h).trim()).indexOf(COL_QA_LDAP_QA),
+      vistoMeli: header.map(h => String(h).trim()).indexOf(COL_QA_VISTO_MELI)
+    };
+
+    let filteredDataRows = dataRows;
+    
+    if (indices.fechaReg > -1) {
+      const combinedData = dataRows.map((row, index) => ({
+        originalRow: row,
+        displayDateString: displayValues[index]?.[indices.fechaReg] || null
+      }));
+      
+      combinedData.sort((a, b) => {
+        const dateA = parseGASDateString(a.displayDateString);
+        const dateB = parseGASDateString(b.displayDateString);
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      filteredDataRows = combinedData.map(item => item.originalRow);
+    }
+
+    if (userRol !== 'Administrador') {
+      if (userRol === 'QA' && indices.ldapQa > -1) {
+        filteredDataRows = filteredDataRows.filter(row => 
+          row && row.length > indices.ldapQa && 
+          String(row[indices.ldapQa]).trim().toLowerCase() === usernameLower
+        );
+      } else if (userRol === 'QS' && indices.vistoMeli > -1) {
+        filteredDataRows = filteredDataRows.filter(row => 
+          row && row.length > indices.vistoMeli && 
+          String(row[indices.vistoMeli]).trim().toLowerCase() === 'sí'
+        );
+      }
+    }
+
+    return [
+      header.map(cell => formatCell(cell)),
+      ...filteredDataRows.map(row => row.map(cell => formatCell(cell)))
+    ];
+  } catch (e) {
+    Logger.log(`Error obtenerRegistrosQA: ${e.message} \nStack: ${e.stack}`);
+    return [];
+  }
 }
 function actualizarRegistroQA(registroId, nuevoEstado, nuevaRespuesta, vistoFormacion, vistoMeli, expectedCaso) {
   try {
@@ -464,22 +515,26 @@ function checkForQaUpdatesForUser(username) {
 }
 
 function getMetricsData(ldap, simpleDayFilter = null) {
-  try {
-    if (!ldap) {
-      Logger.log("getMetricsData: LDAP no proporcionado");
-      return null;
-    }
+  if (!ldap) {
+    Logger.log("getMetricsData: LDAP no proporcionado");
+    return null;
+  }
 
+  try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
     const sheets = ss.getSheets();
-    let totalCasos = 0;
-    let casosHoy = 0;
-    let casosPendientes = 0;
-    let casosAperturados = 0;
-    let conductasInadecuadas = 0;
+    const metrics = {
+      totalCasos: 0,
+      casosHoy: 0,
+      casosPendientes: 0,
+      casosAperturados: 0,
+      conductasInadecuadas: 0,
+      tmoPromedio: '00:00:00'
+    };
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const searchLdap = String(ldap).trim().toLowerCase();
 
     sheets.forEach(sheet => {
       try {
@@ -487,60 +542,45 @@ function getMetricsData(ldap, simpleDayFilter = null) {
         if (data.length < 2) return;
 
         const headers = data[0];
-        const ldapColIndex = headers.indexOf(COL_USUARIO_LDAP);
-        const fechaColIndex = headers.indexOf(COL_FECHA_ASIGNACION);
-        const estadoColIndex = headers.indexOf(COL_ESTADO_CASO);
-        const marcaCIColIndex = headers.indexOf(COL_MARCA_CI);
+        const indices = {
+          ldap: headers.findIndex(h => String(h).trim().toLowerCase() === COL_USUARIO_LDAP.toLowerCase()),
+          fecha: headers.findIndex(h => String(h).trim().toLowerCase() === COL_FECHA_ASIGNACION.toLowerCase()),
+          estado: headers.findIndex(h => String(h).trim().toLowerCase() === COL_ESTADO_CASO.toLowerCase()),
+          tipo: headers.findIndex(h => String(h).trim().toLowerCase() === COL_TIPO_ACCION.toLowerCase())
+        };
 
-        if (ldapColIndex === -1) return;
+        if (indices.ldap === -1) return;
 
-        data.slice(1).forEach(row => {
-          if (String(row[ldapColIndex]).trim() === String(ldap).trim()) {
-            totalCasos++;
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          if (String(row[indices.ldap]).trim().toLowerCase() !== searchLdap) continue;
 
-            // Contar casos pendientes
-            if (estadoColIndex !== -1 && String(row[estadoColIndex]).trim().toLowerCase() === "Pendiente") {
-              casosPendientes++;
-            }
+          metrics.totalCasos++;
 
-            // Contar casos aperturados
-            if (estadoColIndex !== -1) {
-              const estado = String(row[estadoColIndex]).trim();
-              Logger.log(`Estado del caso: "${estado}"`);
-              if (estado === "Aperturado") {
-                casosAperturados++;
-                Logger.log(`Caso aperturado encontrado. Total: ${casosAperturados}`);
-              }
-            }
-
-            // Contar casos de hoy
-            if (fechaColIndex !== -1 && row[fechaColIndex] instanceof Date) {
-              const fechaAsignacion = new Date(row[fechaColIndex]);
-              fechaAsignacion.setHours(0, 0, 0, 0);
-              if (fechaAsignacion.getTime() === today.getTime()) {
-                casosHoy++;
-              }
-            }
-
-            // Contar conductas inadecuadas
-            if (marcaCIColIndex !== -1 && row[marcaCIColIndex]) {
-              conductasInadecuadas++;
+          if (indices.fecha !== -1 && row[indices.fecha]) {
+            const fechaAsignacion = parseGASDateString(row[indices.fecha]);
+            if (fechaAsignacion && fechaAsignacion >= today) {
+              metrics.casosHoy++;
             }
           }
-        });
-      } catch (sheetError) {
-        Logger.log(`Error procesando hoja ${sheet.getName()}: ${sheetError.message}`);
+
+          if (indices.estado !== -1) {
+            const estado = String(row[indices.estado]).trim().toLowerCase();
+            if (estado === 'pendiente') metrics.casosPendientes++;
+            else if (estado === 'aperturado') metrics.casosAperturados++;
+          }
+
+          if (indices.tipo !== -1) {
+            const tipo = String(row[indices.tipo]).trim().toLowerCase();
+            if (tipo === 'conducta inadecuada') metrics.conductasInadecuadas++;
+          }
+        }
+      } catch (e) {
+        Logger.log(`Error procesando hoja ${sheet.getName()}: ${e.message}`);
       }
     });
 
-    return {
-      totalCasos: totalCasos,
-      casosHoy: casosHoy,
-      casosPendientes: casosPendientes,
-      casosAperturados: casosAperturados,
-      conductasInadecuadas: conductasInadecuadas
-    };
-
+    return metrics;
   } catch (e) {
     Logger.log(`Error en getMetricsData: ${e.message}`);
     return null;
@@ -626,89 +666,5 @@ function getSheetByTeam(team) {
   } catch (e) {
     Logger.log(`Error en getSheetByTeam para equipo '${team}': ${e.message}`);
     return null;
-  }
-}
-
-  /**
- * Consolida los datos de la columna B (desde B2 hacia abajo) de varias hojas fuente
- * en la columna B de la hoja 'Analityscs_DB', formateando los datos como texto.
- */
-function consolidarDatosColumnaB() {
-  // Obtiene el libro de cálculo activo.
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // Nombres de las hojas de donde se extraerán los datos.
-  const nombresHojasFuente = [
-    'FBM',
-    'DISTRIBUCION',
-    'PRE_DESPACHO',
-    'VIAJE_DEL_PAQUETE',
-    'REDES',
-    'KANGU'
-  ];
-
-  // Nombre de la hoja destino donde se pegarán los datos.
-  const nombreHojaDestino = 'Analityscs_DB';
-  // Celda de inicio en la hoja destino (columna B, fila 2).
-  const columnaDestino = 2; // Columna B
-  const filaInicioDestino = 2; // Fila 2
-
-  // Array para almacenar todos los datos recolectados.
-  let todosLosDatos = [];
-
-  // Itera sobre cada nombre de hoja fuente.
-  nombresHojasFuente.forEach(nombreHoja => {
-    const hojaFuente = ss.getSheetByName(nombreHoja);
-    if (hojaFuente) {
-      // Determina la última fila con contenido en la hoja fuente.
-      const ultimaFilaFuente = hojaFuente.getLastRow();
-
-      // Solo procesa si hay datos más allá de la fila 1.
-      if (ultimaFilaFuente >= filaInicioDestino) {
-        // Obtiene los valores de la columna B (columna 2), desde la fila 2 hasta la última fila con datos.
-        const rangoValores = hojaFuente.getRange(filaInicioDestino, columnaDestino, ultimaFilaFuente - filaInicioDestino + 1, 1).getValues();
-        
-        // Filtra las filas donde la celda B no esté vacía y convierte el valor a String.
-        const datosDeHoja = rangoValores
-          .filter(fila => fila[0] !== null && fila[0] !== undefined && fila[0].toString().trim() !== "")
-          .map(fila => [String(fila[0])]); // Asegura que cada valor sea un String.
-
-        // Si se encontraron datos en la hoja actual, los añade al array general.
-        if (datosDeHoja.length > 0) {
-          todosLosDatos = todosLosDatos.concat(datosDeHoja);
-        }
-      }
-    } else {
-      // Registra una advertencia si una hoja fuente no se encuentra (no interrumpe el script).
-      console.warn(`La hoja fuente "${nombreHoja}" no fue encontrada.`);
-    }
-  });
-
-  // Obtiene la hoja destino.
-  const hojaDestino = ss.getSheetByName(nombreHojaDestino);
-  if (!hojaDestino) {
-    SpreadsheetApp.getUi().alert(`La hoja destino "${nombreHojaDestino}" no fue encontrada. No se realizó ninguna acción.`);
-    return; // Termina la ejecución si la hoja destino no existe.
-  }
-
-  // Limpia el contenido y formato previo en la columna B de la hoja destino, desde B2 hacia abajo.
-  // Se limpia desde la fila de inicio hasta el máximo de filas de la hoja para asegurar una limpieza completa.
-  if (hojaDestino.getMaxRows() >= filaInicioDestino) {
-    hojaDestino.getRange(filaInicioDestino, columnaDestino, hojaDestino.getMaxRows() - filaInicioDestino + 1, 1)
-      .clearContent()
-      .clearFormat();
-  }
-
-  // Si se recolectaron datos de las hojas fuente.
-  if (todosLosDatos.length > 0) {
-    // Escribe los nuevos datos en la hoja destino.
-    // Establece el formato de número de las celdas a '@' (Texto) antes de escribir los valores.
-    hojaDestino.getRange(filaInicioDestino, columnaDestino, todosLosDatos.length, 1)
-      .setNumberFormat('@') 
-      .setValues(todosLosDatos);
-    SpreadsheetApp.getUi().alert(`Datos consolidados y formateados como texto en la hoja "${nombreHojaDestino}" (Columna B).`);
-  } else {
-    // Si no se encontraron datos, informa al usuario. La hoja destino ya fue limpiada.
-    SpreadsheetApp.getUi().alert('No se encontraron datos en las hojas fuente para consolidar.');
   }
 }
