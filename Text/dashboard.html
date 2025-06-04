@@ -20,7 +20,7 @@
     #loginContainer input[type=text]{width:100%;padding:12px 15px;border-radius:5px;border:1px solid #ced4da;font-size:1em;box-sizing:border-box;transition:border-color .2s ease,box-shadow .2s ease}
     #loginContainer input[type=text]:focus{border-color:#80bdff;outline:0;box-shadow:0 0 0 .2rem rgba(0,123,255,.25)}
     #loginContainer button{width:100%;padding:12px 15px;font-size:1.1em}
-    .dashboard-container{background:#fff;padding:25px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);width:95%;max-width:1800px;margin:40px auto 40px auto;display:none}
+    .dashboard-container{background:#fff;padding:25px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);width:95%;max-width:1800px;margin-top:20px;margin-bottom:20px;display:none}
     .role-administrador{} .role-qa{} .role-qs{}
     .dashboard-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #eee;flex-wrap:wrap;gap:15px}
     .dashboard-header h2{color:#1a237e;margin-bottom:0;font-size:1.8em;text-align:left;flex-grow:1}
@@ -76,7 +76,7 @@
     #dataTable td a{color:#007bff;text-decoration:none;cursor:pointer;display:inline-block;padding:2px 5px}
     #dataTable td a:hover{text-decoration:underline;color:#0056b3}
     #dataTable td a .fa-eye{color:green;margin-left:5px}
-    #dataTable .actions-cell{text-align:center;white-space:nowrap;overflow:visible;vertical-align:middle}
+    #dataTable .actions-cell{text-align:center;white-space:nowrap;overflow:visible}
     #dataTable .actions-cell button{margin:0 3px;padding:6px 10px;font-size:.85em}
     .repeated-case-highlight{background-color:rgba(151,213,82,.8)!important}
     #tablaRegistros{table-layout:fixed;word-wrap:break-word}
@@ -156,39 +156,6 @@
     .swal-gestion-list li{margin-bottom:12px}
     .ci-tl-group label{display:inline-block;margin-right:15px}
     .ci-tl-group input[type=checkbox]{margin-right:5px}
-    .table-container {
-      max-width: 98vw;
-      margin: 0 auto;
-      overflow-x: auto;
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,.07);
-      width: 100%;
-      box-sizing: border-box;
-      background: #fff;
-    }
-    #dataTable {
-      width: 100%;
-      min-width: 1200px;
-      max-width: 100%;
-      margin: 0 auto;
-      border-collapse: collapse;
-      background: #fff;
-      table-layout: fixed;
-      word-wrap: break-word;
-    }
-    .acciones-btn-group {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      align-items: center;
-    }
-    #dataTable th:last-child, #dataTable td:last-child {
-      width: 265px;
-      min-width: 180px;
-      max-width: 260px;
-      white-space: nowrap;
-    }
   </style>
 </head>
 <body>
@@ -274,12 +241,12 @@
     let currentQaData = [];
     let currentFilteredQaData = [];
     let asignacionesSearchColumnIndices = {};
-    const ASIGNACIONES_HEADERS_TO_SEARCH = ['CASE', 'Fecha y hora de la asignación', 'SAMPLE_DATE', 'Canal', 'Proceso', 'Accion', 'USER_OFFICE', 'INTERACTION_ID'];
-    const SIMPLE_DAY_HEADER = "SAMPLE_DATE";
+    const ASIGNACIONES_HEADERS_TO_SEARCH = ['#Caso', 'Fecha y hora de la asignación', 'Simple Day', 'Canal', 'Proceso', 'Tipo de accion','Oficina','Interacción'];
+    const SIMPLE_DAY_HEADER = "Simple Day";
     const FECHA_ASIGNACION_HEADER = "Fecha y hora de la asignación";
     const CONTROL_APERTURA_HEADER = "Control Apertura Url";
-    const LINK_HEADER = "Link Alma";
-    const INTERACCION_HEADER = "INTERACTION_ID";
+    const LINK_HEADER = "Link";
+    const INTERACCION_HEADER = "Interacción";
     const MARCA_EG_HEADER = "Marca de EG";
     const MARCA_CI_HEADER = "Marca de CI";
     function handleLogin() {
@@ -328,14 +295,10 @@
     }
     function showLoading(show) { document.getElementById("loading").style.display = show ? "flex" : "none"; }
     function getCurrentFormattedTimestampCliente() {
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
+        const now = new Date(); const day = String(now.getDate()).padStart(2, '0'); const month = String(now.getMonth() + 1).padStart(2, '0'); const year = now.getFullYear();
+        let hours = now.getHours(); const minutes = String(now.getMinutes()).padStart(2, '0'); const seconds = String(now.getSeconds()).padStart(2, '0'); const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12; hours = hours ? hours : 12; const hoursStr = String(hours).padStart(2, '0'); const strTime = `${hoursStr}:${minutes}:${seconds} ${ampm}`;
+        return `${day}-${month}-${year}, ${strTime}`;
     }
     function setRefreshButtonState(isLoading) {
         const btn = document.getElementById('refreshButton'); if (!btn) return; const icon = btn.querySelector('i.fas');
@@ -385,71 +348,28 @@
         setRefreshButtonState(true); if (ldapSelect) ldapSelect.disabled = true; if (teamSelect) teamSelect.disabled = true;
         let initialColspan = tableHead.rows[0]?.cells.length || 13; tableBody.innerHTML = `<tr><td colspan="${initialColspan}" class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>`; tableHead.innerHTML = ''; asignacionesSearchColumnIndices = {};
         google.script.run.withSuccessHandler(response => {
-            console.log("Respuesta getAssignments:", response); // <-- LOG AGREGADO
             if (!response || !response.headers || !response.data || !Array.isArray(response.headers) || !Array.isArray(response.data)) { console.error("Respuesta inválida de getAssignments:", response); tableHead.innerHTML = ''; tableBody.innerHTML = `<tr><td colspan="13" class="no-data">Error al cargar datos.</td></tr>`; if (searchInput) searchInput.disabled = true; }
             else if (response.headers.length === 0) { console.log("No hay cabeceras ni datos para", ldap, team); tableHead.innerHTML = ''; tableBody.innerHTML = `<tr><td colspan="13" class="no-data">No hay asignaciones pendientes.</td></tr>`; if (searchInput) searchInput.disabled = true; }
             else {
-                 // Definir los headers a mostrar (en el orden original)
-                 const HEADERS_TO_SHOW = [
-                    'CASE',
-                    'Fecha y hora de la asignación',
-                    'SAMPLE_DATE',
-                    'Canal',
-                    'Proceso',
-                    'Accion',
-                    'USER_OFFICE',
-                    'INTERACTION_ID',
-                    'ANALIZADOR',
-                    'TEAM',
-                    'Link Alma'
-                 ];
-                 const allHeaders = response.headers;
-                 // Filtrar y mapear los headers visibles (excluyendo Observaciones y manteniendo el orden)
-                 const visibleHeadersData = HEADERS_TO_SHOW.map(h => {
-                    const idx = allHeaders.findIndex(col => String(col).trim().toLowerCase() === h.toLowerCase());
-                    return idx !== -1 ? { header: h, originalIndex: idx } : null;
-                 }).filter(Boolean);
+                 const allHeaders = response.headers; const data = response.data; const headersToAlwaysHide = [MARCA_EG_HEADER, MARCA_CI_HEADER, "Control Cierre Url", CONTROL_APERTURA_HEADER];
+                 let simpleDayColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === SIMPLE_DAY_HEADER.toLowerCase()); let fechaAsignacionColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === FECHA_ASIGNACION_HEADER.toLowerCase());
+                 let aperturaColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === CONTROL_APERTURA_HEADER.toLowerCase()); let linkColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === LINK_HEADER.toLowerCase());
+                 let caseNumberIndexOriginal = allHeaders.findIndex(h => String(h).toLowerCase() === '#caso'); let interaccionColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === INTERACCION_HEADER.toLowerCase());
+                 const visibleHeadersData = allHeaders.map((h, index) => ({ header: h, originalIndex: index })).filter(item => !headersToAlwaysHide.includes(item.header));
                  const numVisibleColumns = visibleHeadersData.length + 2;
                  let caseCounts = {};
-                 let processedData = response.data.map((row, originalRowIndex) => {
-                     // ... lógica de fechas y overdue igual ...
-                     const simpleDayColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === SIMPLE_DAY_HEADER.toLowerCase());
-                     const fechaAsignacionColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === FECHA_ASIGNACION_HEADER.toLowerCase());
-                     const aperturaColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === CONTROL_APERTURA_HEADER.toLowerCase());
-                     const linkColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === LINK_HEADER.toLowerCase());
-                     const caseNumberIndexOriginal = allHeaders.findIndex(h => h.toLowerCase() === 'case');
-                     const interaccionColIndexOriginal = allHeaders.findIndex(h => String(h).trim().toLowerCase() === INTERACCION_HEADER.toLowerCase());
-                     const simpleDayString = (simpleDayColIndexOriginal !== -1 && row.length > simpleDayColIndexOriginal) ? row[simpleDayColIndexOriginal] : null;
-                     const fechaAsignacionString = (fechaAsignacionColIndexOriginal !== -1 && row.length > fechaAsignacionColIndexOriginal) ? row[fechaAsignacionColIndexOriginal] : null;
-                     const aperturaTimestamp = (aperturaColIndexOriginal !== -1 && row.length > aperturaColIndexOriginal) ? row[aperturaColIndexOriginal] : null;
-                     const simpleDayDate = parseDateString(simpleDayString);
-                     const fechaAsignacionDate = parseDateString(fechaAsignacionString);
-                     const caseNumber = (caseNumberIndexOriginal !== -1 && row[caseNumberIndexOriginal]) ? String(row[caseNumberIndexOriginal]).trim() : null;
-                     const interactionId = (interaccionColIndexOriginal !== -1 && row[interaccionColIndexOriginal]) ? String(row[interaccionColIndexOriginal]).trim() : `int-${originalRowIndex}-${Date.now()}`;
+                 let processedData = data.map((row, originalRowIndex) => {
+                     const simpleDayString = (simpleDayColIndexOriginal !== -1 && row.length > simpleDayColIndexOriginal) ? row[simpleDayColIndexOriginal] : null; const fechaAsignacionString = (fechaAsignacionColIndexOriginal !== -1 && row.length > fechaAsignacionColIndexOriginal) ? row[fechaAsignacionColIndexOriginal] : null;
+                     const aperturaTimestamp = (aperturaColIndexOriginal !== -1 && row.length > aperturaColIndexOriginal) ? row[aperturaColIndexOriginal] : null; const simpleDayDate = parseDateString(simpleDayString); const fechaAsignacionDate = parseDateString(fechaAsignacionString);
+                     const caseNumber = (caseNumberIndexOriginal !== -1 && row[caseNumberIndexOriginal]) ? String(row[caseNumberIndexOriginal]).trim() : null; const interactionId = (interaccionColIndexOriginal !== -1 && row[interaccionColIndexOriginal]) ? String(row[interaccionColIndexOriginal]).trim() : `int-${originalRowIndex}-${Date.now()}`;
                      if (caseNumber) { caseCounts[caseNumber] = (caseCounts[caseNumber] || 0) + 1; }
-                     let isOverdue = false;
-                     if (simpleDayDate && fechaAsignacionDate) {
-                        const sdUTC = Date.UTC(simpleDayDate.getFullYear(), simpleDayDate.getMonth(), simpleDayDate.getDate());
-                        const faUTC = Date.UTC(fechaAsignacionDate.getFullYear(), fechaAsignacionDate.getMonth(), fechaAsignacionDate.getDate());
-                        if (sdUTC < faUTC) isOverdue = true;
-                     }
+                     let isOverdue = false; if (simpleDayDate && fechaAsignacionDate) { const sdUTC = Date.UTC(simpleDayDate.getFullYear(), simpleDayDate.getMonth(), simpleDayDate.getDate()); const faUTC = Date.UTC(fechaAsignacionDate.getFullYear(), fechaAsignacionDate.getMonth(), fechaAsignacionDate.getDate()); if (sdUTC < faUTC) isOverdue = true; }
                      return { rowData: row, isOverdue: isOverdue, fechaAsignacion: fechaAsignacionDate, aperturaTimestamp: aperturaTimestamp, caseNumber: caseNumber, interactionId: interactionId };
                  });
                  processedData.sort((a, b) => { if (a.isOverdue && !b.isOverdue) return -1; if (!a.isOverdue && b.isOverdue) return 1; const dateA = a.fechaAsignacion; const dateB = b.fechaAsignacion; if (dateA && dateB) return dateB.getTime() - dateA.getTime(); else if (dateB) return 1; else if (dateA) return -1; else return 0; });
-                 let headerHtml = '<tr><th>#</th>';
-                 let currentVisibleIndex = 1; asignacionesSearchColumnIndices = {}; let visibleCaseIndex = -1; let visibleInteractionIndex = -1;
-                 visibleHeadersData.forEach(({ header }, idx) => {
-                    const cleanedHeader = String(header).trim();
-                    headerHtml += `<th>${cleanedHeader}</th>`;
-                    if (ASIGNACIONES_HEADERS_TO_SEARCH.some(searchHdr => cleanedHeader.toLowerCase() === searchHdr.toLowerCase())) {
-                        asignacionesSearchColumnIndices[cleanedHeader] = currentVisibleIndex;
-                    }
-                    if (cleanedHeader.toLowerCase() === 'case') { visibleCaseIndex = currentVisibleIndex; }
-                    if (cleanedHeader.toLowerCase() === INTERACCION_HEADER.toLowerCase()) { visibleInteractionIndex = currentVisibleIndex; }
-                    currentVisibleIndex++;
-                 });
-                 headerHtml += '<th><i class="fas fa-cogs icon"></i>Acciones</th></tr>';
-                 tableHead.innerHTML = headerHtml;
+                 let headerHtml = '<tr><th>#</th>'; let currentVisibleIndex = 1; asignacionesSearchColumnIndices = {}; let visibleCaseIndex = -1; let visibleInteractionIndex = -1;
+                 visibleHeadersData.forEach(({ header }) => { const cleanedHeader = String(header).trim(); headerHtml += `<th>${cleanedHeader}</th>`; if (ASIGNACIONES_HEADERS_TO_SEARCH.some(searchHdr => cleanedHeader.toLowerCase() === searchHdr.toLowerCase())) { asignacionesSearchColumnIndices[cleanedHeader] = currentVisibleIndex; } if (cleanedHeader.toLowerCase() === '#caso') { visibleCaseIndex = currentVisibleIndex; } if (cleanedHeader.toLowerCase() === INTERACCION_HEADER.toLowerCase()) { visibleInteractionIndex = currentVisibleIndex; } currentVisibleIndex++; });
+                 headerHtml += '<th><i class="fas fa-cogs icon"></i>Acciones</th></tr>'; tableHead.innerHTML = headerHtml; console.log("Índices búsqueda Asignaciones (Visibles):", asignacionesSearchColumnIndices); console.log("Índice visible #Caso:", visibleCaseIndex, "Índice visible Interacción:", visibleInteractionIndex);
                  if (processedData.length === 0) { tableBody.innerHTML = `<tr><td colspan="${numVisibleColumns}" class="no-data">No hay asignaciones pendientes para ${ldap} en ${team}.</td></tr>`; if (searchInput) searchInput.disabled = true; }
                  else {
                      try {
@@ -457,27 +377,9 @@
                              const row = item.rowData; const isOverdue = item.isOverdue; const aperturaTimestamp = item.aperturaTimestamp; const caseNumber = item.caseNumber; const interactionId = item.interactionId; const isRepeated = caseNumber && caseCounts[caseNumber] > 1;
                              if (!Array.isArray(row) || row.length !== allHeaders.length) { console.warn(`Fila ${index+1} inválida`); return `<tr><td colspan="${numVisibleColumns}">Error fila ${index+1}</td></tr>`; }
                              const rowId = `assignment-row-${caseNumber}-${interactionId}-${index}`; const rowClass = isOverdue ? 'overdue-case' : ''; let rowHtml = `<tr id="${rowId}" class="${rowClass}"><td>${index + 1}</td>`;
-                             visibleHeadersData.forEach(({ originalIndex, header }, visibleIndex) => {
-                                let cellContent = (row.length > originalIndex && row[originalIndex] != null) ? String(row[originalIndex]) : '';
-                                let tdClass = '';
-                                const currentVisibleCellIndex = visibleIndex + 1;
-                                if (isRepeated && (currentVisibleCellIndex === visibleCaseIndex || currentVisibleCellIndex === visibleInteractionIndex)) { tdClass += ' repeated-case-highlight'; }
-                                if (header === 'Link Alma' && typeof cellContent === 'string' && (cellContent.startsWith("http://") || cellContent.startsWith("https://"))) {
-                                    const safeUrl = cellContent.replace(/"/g, '&quot;');
-                                    let linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="${safeUrl}" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">${safeUrl}</a>`;
-                                    if (aperturaTimestamp) {
-                                        const safeTimestamp = String(aperturaTimestamp).replace(/"/g, '&quot;');
-                                        linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="${safeUrl}" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">${safeUrl}<i class="fas fa-eye" title="Abierto: ${safeTimestamp}"></i></a>`;
-                                    }
-                                    cellContent = linkInnerHtml;
-                                    tdClass += ' text-center';
-                                }
-                                rowHtml += `<td class="${tdClass.trim()}">${cellContent}</td>`;
-                             });
+                             visibleHeadersData.forEach(({ originalIndex, header }, visibleIndex) => { let cellContent = (row.length > originalIndex && row[originalIndex] != null) ? String(row[originalIndex]) : ''; let tdClass = ''; const currentVisibleCellIndex = visibleIndex + 1; if (isRepeated && (currentVisibleCellIndex === visibleCaseIndex || currentVisibleCellIndex === visibleInteractionIndex)) { tdClass += ' repeated-case-highlight'; } if (originalIndex === linkColIndexOriginal && typeof cellContent === 'string' && (cellContent.startsWith("http://") || cellContent.startsWith("https://"))) { const safeUrl = cellContent.replace(/"/g, '&quot;'); let linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="Abrir Enlace" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">Enlace</a>`; if (aperturaTimestamp) { const safeTimestamp = String(aperturaTimestamp).replace(/"/g, '&quot;'); linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="Abrir Enlace" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">Enlace<i class="fas fa-eye" title="Abierto: ${safeTimestamp}"></i></a>`; } cellContent = linkInnerHtml; tdClass += ' text-center'; } rowHtml += `<td class="${tdClass.trim()}">${cellContent}</td>`; });
                              const safeRowId = rowId.replace(/'/g, "\\'"); const safeTeam = team.replace(/'/g, "\\'"); const safeLdap = ldap.replace(/'/g, "\\'"); const safeCaseNumber = String(caseNumber).replace(/'/g, "\\'"); const safeInteractionId = String(interactionId).replace(/'/g, "\\'");
-                             rowHtml += `<td class="actions-cell"><div class="acciones-btn-group"><button class="btn-action" onclick="finalizarCaso('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-check-circle icon"></i>Finalizar</button><button class="btn-confirm-gestion" onclick="abrirModalConfirmacionGestion('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-marker icon"></i>Confirma tu Gestión</button></div></td>`;
-                             rowHtml += `</tr>`;
-                             return rowHtml;
+                             rowHtml += `<td class="actions-cell"><button class="btn-action" onclick="finalizarCaso('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-check-circle icon"></i>Finalizar</button><button class="btn-confirm-gestion" onclick="abrirModalConfirmacionGestion('${safeRowId}', '${safeTeam}', '${safeLdap}', '${safeCaseNumber}', '${safeInteractionId}')"><i class="fas fa-marker icon"></i>Confirma tu Gestión</button></td>`; rowHtml += `</tr>`; return rowHtml;
                          }).join(''); filterAsignacionesTable(''); if (searchInput) searchInput.disabled = false;
                      } catch (mapError) { console.error("Error mapeo asignaciones:", mapError); tableBody.innerHTML = `<tr><td colspan="${numVisibleColumns}" class="no-data">Error al mostrar datos.</td></tr>`; if (searchInput) searchInput.disabled = true; }
                  }
