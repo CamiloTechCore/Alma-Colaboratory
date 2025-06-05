@@ -20,6 +20,7 @@ var COL_LINK = "Link Alma"; // Nombre EXACTO de la columna Link
 var COL_CANAL = "Canal";
 var COL_PROCESO = "Proceso";
 var COL_TIPO_ACCION = "Accion";
+var COL_ESTADO = "ESTADO"; // Nueva columna para el estado del registro
 // *** NUEVAS COLUMNAS DE GESTIÓN ***
 var COL_MARCA_EG = "Marca de EG"; // Nueva columna N
 var COL_MARCA_CI = "Marca de CI"; // Nueva columna O
@@ -258,23 +259,33 @@ function getAssignments(ldap, team) {
     var simpleDayColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_SIMPLE_DAY.toLowerCase());
     var aperturaColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_CONTROL_APERTURA.toLowerCase());
     var interaccionColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_INTERACCION.toLowerCase());
+    var estadoColIndex0Based = headers.map(h => h.toLowerCase()).indexOf(COL_ESTADO.toLowerCase());
+
     if (ldapColIndex0Based === -1) { Logger.log(`ERROR Crítico: Columna '${COL_USUARIO_LDAP}' no encontrada.`); return { headers: [], data: [] }; }
     if (cierreColIndex0Based === -1) { Logger.log(`ERROR Crítico: Columna '${COL_CONTROL_CIERRE}' no encontrada.`); return { headers: [], data: [] }; }
     if (teamColIndex0Based === -1) { Logger.log(`ERROR Crítico: Columna 'TEAM' no encontrada.`); return { headers: [], data: [] }; }
     if (interaccionColIndex0Based === -1) Logger.log(`Advertencia: Columna '${COL_INTERACCION}' no encontrada.`);
+    if (estadoColIndex0Based === -1) Logger.log(`Advertencia: Columna '${COL_ESTADO}' no encontrada.`);
+
     const processedDataRows = [];
     for (let i = headerRowIndex; i < allDataValues.length; i++) {
       const rowValues = allDataValues[i];
       const rowDisplayValues = allDataDisplayValues[i];
-      // Filtrar por usuario, equipo y que la columna de cierre esté vacía
+      
+      // Obtener el estado del registro
+      const estado = rowValues[estadoColIndex0Based] != null ? String(rowValues[estadoColIndex0Based]).trim() : '';
+      
+      // Filtrar por usuario, equipo, que la columna de cierre esté vacía y que el estado no sea "Realizado"
       if (!rowValues ||
           rowValues.length <= Math.max(ldapColIndex0Based, cierreColIndex0Based, teamColIndex0Based) ||
           rowValues[ldapColIndex0Based] == null ||
           String(rowValues[ldapColIndex0Based]).trim() !== searchLdap ||
           String(rowValues[teamColIndex0Based]).trim() !== searchTeam ||
-          (rowValues[cierreColIndex0Based] != null && String(rowValues[cierreColIndex0Based]).trim() !== '')) {
+          (rowValues[cierreColIndex0Based] != null && String(rowValues[cierreColIndex0Based]).trim() !== '') ||
+          estado === 'Realizado') {
         continue;
       }
+
       const rowOutput = rowValues.map((cellValue, colIndex) => {
         if (colIndex === fechaAsignacionColIndex0Based || colIndex === simpleDayColIndex0Based || colIndex === aperturaColIndex0Based) {
            return (rowDisplayValues && rowDisplayValues.length > colIndex) ? rowDisplayValues[colIndex] : '';
@@ -546,4 +557,40 @@ function checkForQaUpdatesForUser(username) {
     }
     return results;
   } catch (e) { Logger.log(`Error Polling QA para ${username}: ${e.message}`); return []; }
+}
+
+function getChannels() {
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
+    var sheet = ss.getSheetByName("ME_View");
+    if (!sheet) {
+      Logger.log(`Error: Hoja 'ME_View' no encontrada.`);
+      return [];
+    }
+
+    var dataRange = sheet.getDataRange();
+    var values = dataRange.getValues();
+    var headers = values[0];
+    
+    // Buscar el índice de la columna Canal
+    var canalColIndex = headers.findIndex(h => h.toString().toLowerCase() === 'canal');
+    if (canalColIndex === -1) {
+      Logger.log('Columna Canal no encontrada');
+      return [];
+    }
+
+    // Obtener valores únicos de la columna Canal, excluyendo el encabezado
+    var channels = new Set();
+    for (var i = 1; i < values.length; i++) {
+      var canal = values[i][canalColIndex];
+      if (canal && canal.toString().trim() !== '') {
+        channels.add(canal.toString().trim());
+      }
+    }
+
+    return Array.from(channels).sort();
+  } catch (error) {
+    Logger.log('Error en getChannels: ' + error.toString());
+    return [];
+  }
 }

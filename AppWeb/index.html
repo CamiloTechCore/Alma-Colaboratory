@@ -71,7 +71,7 @@
     #dataTable th:nth-child(9),#dataTable td:nth-child(9){width:9%}
     #dataTable th:nth-child(10),#dataTable td:nth-child(10){width:9%}
     #dataTable th:nth-child(11),#dataTable td:nth-child(11){width:9%}
-    #dataTable th:nth-child(12),#dataTable td:nth-child(12){width:6%;text-align:center}
+    #dataTable th:nth-child(12),#dataTable td:nth-child(12){width:8%;text-align:center}
     #dataTable th:nth-child(13),#dataTable td:nth-child(13){width:22%;text-align:center}
     #dataTable td a{color:#007bff;text-decoration:none;cursor:pointer;display:inline-block;padding:2px 5px}
     #dataTable td a:hover{text-decoration:underline;color:#0056b3}
@@ -189,6 +189,7 @@
       max-width: 260px;
       white-space: nowrap;
     }
+    #dataTable td.link-cell{text-align:left;white-space:nowrap;overflow:visible}
   </style>
 </head>
 <body>
@@ -225,6 +226,10 @@
             <div class="control-group">
               <label for="teamSelect"><i class="fas fa-users-cog icon"></i>Equipo:</label>
               <select id="teamSelect" onchange="handleAssignmentSelectionChange()" disabled> <option value="">Cargando...</option> </select>
+            </div>
+            <div class="control-group">
+              <label for="channelSelect"><i class="fas fa-broadcast-tower icon"></i>Canal:</label>
+              <select id="channelSelect" onchange="handleChannelFilterChange()" disabled> <option value="">Cargando...</option> </select>
             </div>
         </div>
         <div class="asignaciones-header-search-container">
@@ -355,12 +360,103 @@
         }
     }
     function handleAssignmentSelectionChange() {
-        const ldap = document.getElementById("ldapSelect").value; const team = document.getElementById("teamSelect").value;
-        const body = document.getElementById("dataTableBody"); const header = document.querySelector("#dataTable thead"); const searchInput = document.getElementById("asignacionesSearchInput");
+        const ldap = document.getElementById("ldapSelect").value;
+        const team = document.getElementById("teamSelect").value;
+        const body = document.getElementById("dataTableBody");
+        const header = document.querySelector("#dataTable thead");
+        const searchInput = document.getElementById("asignacionesSearchInput");
+        const channelSelect = document.getElementById("channelSelect");
+        
         if (searchInput) searchInput.value = '';
-        if (ldap && team) { setRefreshButtonState(true); document.getElementById("ldapSelect").disabled = true; document.getElementById("teamSelect").disabled = true; loadAssignments(ldap, team); }
-        else { if(body) { let colspan = header?.rows[0]?.cells.length || 13; body.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Seleccione usuario y equipo.</td></tr>`; } if(header) header.innerHTML=''; if(searchInput) searchInput.disabled = true; }
+        if (channelSelect) channelSelect.value = '';
+        
+        if (ldap && team) {
+            setRefreshButtonState(true);
+            document.getElementById("ldapSelect").disabled = true;
+            document.getElementById("teamSelect").disabled = true;
+            loadAssignments(ldap, team);
+            loadChannelOptions();
+        } else {
+            if(body) {
+                let colspan = header?.rows[0]?.cells.length || 13;
+                body.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Seleccione usuario y equipo.</td></tr>`;
+            }
+            if(header) header.innerHTML='';
+            if(searchInput) searchInput.disabled = true;
+            if(channelSelect) {
+                channelSelect.disabled = true;
+                channelSelect.innerHTML = `<option value="">Seleccione usuario y equipo</option>`;
+            }
+        }
     }
+
+    function loadChannelOptions() {
+        const channelSelect = document.getElementById("channelSelect");
+        if (!channelSelect) return;
+        
+        channelSelect.innerHTML = `<option value="">Cargando...</option>`;
+        channelSelect.disabled = true;
+        
+        google.script.run
+            .withSuccessHandler(channels => {
+                if (channels && channels.length > 0) {
+                    channelSelect.innerHTML = `<option value="">Todos los Canales</option>` + 
+                        channels.map(channel => `<option value="${channel}">${channel}</option>`).join('');
+                } else {
+                    channelSelect.innerHTML = `<option value="">No hay canales disponibles</option>`;
+                }
+                channelSelect.disabled = false;
+            })
+            .withFailureHandler(error => {
+                console.error('Error cargando canales:', error);
+                channelSelect.innerHTML = `<option value="">Error al cargar canales</option>`;
+                channelSelect.disabled = false;
+            })
+            .getChannels();
+    }
+
+    function handleChannelFilterChange() {
+        const channelSelect = document.getElementById("channelSelect");
+        const selectedChannel = channelSelect.value;
+        const tableBody = document.getElementById("dataTableBody");
+        const rows = tableBody.getElementsByTagName('tr');
+        
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.classList.contains('no-data') || row.classList.contains('loading') || row.classList.contains('no-search-results')) {
+                continue;
+            }
+            
+            const cells = row.getElementsByTagName('td');
+            const channelCell = cells[asignacionesSearchColumnIndices['Canal']];
+            
+            if (selectedChannel === '' || (channelCell && channelCell.textContent.trim() === selectedChannel)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+        
+        // Actualizar mensaje de no resultados
+        let visibleRows = Array.from(rows).filter(row => row.style.display !== 'none').length;
+        let noResultsRow = tableBody.querySelector('.no-search-results');
+        
+        if (visibleRows === 0 && selectedChannel !== '') {
+            if (!noResultsRow) {
+                noResultsRow = tableBody.insertRow();
+                noResultsRow.className = 'no-search-results';
+                const cell = noResultsRow.insertCell();
+                cell.colSpan = rows[0].cells.length;
+                cell.className = 'no-data';
+                noResultsRow.appendChild(cell);
+            }
+            noResultsRow.cells[0].textContent = `No se encontraron casos para el canal "${selectedChannel}".`;
+            noResultsRow.style.display = '';
+        } else if (noResultsRow) {
+            noResultsRow.style.display = 'none';
+        }
+    }
+
     function loadDropdown(endpoint, elementId, placeholder) {
         const select = document.getElementById(elementId); if(!select) return;
         select.innerHTML = `<option value="">Cargando...</option>`; select.disabled = true;
@@ -464,13 +560,13 @@
                                 if (isRepeated && (currentVisibleCellIndex === visibleCaseIndex || currentVisibleCellIndex === visibleInteractionIndex)) { tdClass += ' repeated-case-highlight'; }
                                 if (header === 'Link Alma' && typeof cellContent === 'string' && (cellContent.startsWith("http://") || cellContent.startsWith("https://"))) {
                                     const safeUrl = cellContent.replace(/"/g, '&quot;');
-                                    let linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="${safeUrl}" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">${safeUrl}</a>`;
+                                    let linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="${safeUrl}" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">LINK</a>`;
                                     if (aperturaTimestamp) {
                                         const safeTimestamp = String(aperturaTimestamp).replace(/"/g, '&quot;');
-                                        linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="${safeUrl}" onclick="logLinkClick(event, '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">${safeUrl}<i class="fas fa-eye" title="Abierto: ${safeTimestamp}"></i></a>`;
+                                        linkInnerHtml = `<a href="${safeUrl}" target="_blank" title="${safeUrl}" onclick="logLinkClick(event, '${rowId}', '${rowId}', '${team}', '${ldap}', '${caseNumber}', '${interactionId}')">LINK<i class="fas fa-eye" title="Abierto: ${safeTimestamp}"></i></a>`;
                                     }
                                     cellContent = linkInnerHtml;
-                                    tdClass += ' text-center';
+                                    tdClass += ' link-cell';
                                 }
                                 rowHtml += `<td class="${tdClass.trim()}">${cellContent}</td>`;
                              });
