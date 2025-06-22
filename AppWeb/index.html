@@ -261,15 +261,15 @@
                 <input type="text" id="qaLdapQa" required readonly>
             </div>
             <div class="control-group">
-                <label for="qaTeam"><i class="fas fa-users icon"></i>TEAM (Caso):</label>
+                <label for="qaTeam"><i class="fas fa-users icon"></i>TEAM:</label>
                 <input type="text" id="qaTeam" required>
             </div>
             <div class="control-group">
-                <label for="qaProceso"><i class="fas fa-project-diagram icon"></i>PROCESO (Caso):</label>
+                <label for="qaProceso"><i class="fas fa-project-diagram icon"></i>PROCESO:</label>
                 <input type="text" id="qaProceso" required>
             </div>
             <div class="control-group">
-                <label for="qaCaso"><i class="fas fa-hashtag icon"></i># CASO:</label>
+                <label for="qaCaso"><i class="fas fa-hashtag icon"></i>Interacción:</label>
                 <input type="text" id="qaCaso" required>
             </div>
             <div class="control-group">
@@ -288,7 +288,7 @@
 
         <div class="qa-header-search-container">
             <h3><i class="fas fa-list-alt icon"></i>Registros Guardados QA</h3>
-            <input type="text" id="qaSearchInput" placeholder="Buscar por Fecha, LDAP QA, # CASO...">
+            <input type="text" id="qaSearchInput" placeholder="Buscar por Fecha, LDAP QA, Interacción...">
         </div>
         <div class="table-container">
             <table id="tablaRegistros">
@@ -298,7 +298,7 @@
                 <th>LDAP QA</th>
                 <th>TEAM</th>
                 <th>PROCESO QA</th>
-                <th># CASO</th>
+                <th>Interacción</th>
                 <th>REP A EVALUAR</th>
                 <th>PREGUNTA</th>
                 <th>ESTADO</th>
@@ -1165,7 +1165,7 @@
         const respuestaAdminDisabled = isQs ? 'disabled' : '';
         const respuestaQsDisabled = ''; // <-- CAMBIO REALIZADO AQUÍ
 
-        const formHtml = `<div style="text-align:left;"><p><strong>ID (Fecha Registro):</strong> ${registroId}</p><p><strong># Caso:</strong> ${casoNumero} / <strong>Registró QA:</strong> ${ldapQaQueRegistro}</p><hr>
+        const formHtml = `<div style="text-align:left;"><p><strong>ID (Fecha Registro):</strong> ${registroId}</p><p><strong>Interacción:</strong> ${casoNumero} / <strong>Registró QA:</strong> ${ldapQaQueRegistro}</p><hr>
             <label class="swal-label" for="swal-estado">Estado:</label><select id="swal-estado" class="swal-select"><option value="Pendiente de revisión" ${estado === 'Pendiente de revisión' ? 'selected' : ''}>Pendiente de revisión</option><option value="Revisado Formación" ${estado === 'Revisado Formación' ? 'selected' : ''}>Revisado Formación</option><option value="Revisado QS" ${estado === 'Revisado QS' ? 'selected' : ''}>Revisado QS</option></select>
             <label class="swal-label" for="swal-respuesta">Respuesta (Admin):</label><textarea id="swal-respuesta" class="swal-input" rows="3" ${respuestaAdminDisabled}>${respuesta || ''}</textarea>
             <label class="swal-label" for="swal-respuesta-qs">Respuesta QS:</label><textarea id="swal-respuesta-qs" class="swal-input" rows="3" ${respuestaQsDisabled}>${respuestaQS || ''}</textarea>
@@ -1204,7 +1204,7 @@
         google.script.run
             .withSuccessHandler(notifications => {
                 if (notifications && notifications.length > 0) {
-                    const notificationHtml = '<ul style="text-align: left; margin-left: 20px;">' + notifications.map(n => `<li>${n}</li>`).join('') + '</ul>';
+                    const notificationHtml = '<ul style="text-align: left; margin-leftx: 20px;">' + notifications.map(n => `<li>${n}</li>`).join('') + '</ul>';
                     Swal.fire({
                         title: '<strong>Tienes una respuesta en Seguimiento QA</strong>',
                         icon: 'info',
