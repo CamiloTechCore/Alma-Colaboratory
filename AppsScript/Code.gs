@@ -3,9 +3,9 @@
    */
 
   // --- Constantes Globales ---
-  var SPREADSHEET_ID_ASIGNACIONES = "1zFfhkh_ZkPI3te31MSI0UKpI2xSS-HuNzYUGDt-uCYk"; // ID Hoja Asignaciones
-  var SPREADSHEET_ID_QA = "1zFfhkh_ZkPI3te31MSI0UKpI2xSS-HuNzYUGDt-uCYk"; // ID Hoja QA y Directorio
-  var QA_SHEET_NAME = "Registros"; // Nombre Hoja Registros QA
+  var SPREADSHEET_ID_ASIGNACIONES = "1L8d4_S8M8v2kwKmkxsmDOgKd97sM1Lxq7WsYfkRaW1c"; // ID Hoja Asignaciones
+  var SPREADSHEET_ID_QA = "1L8d4_S8M8v2kwKmkxsmDOgKd97sM1Lxq7WsYfkRaW1c"; // ID Hoja QA y Directorio
+  var QA_SHEET_NAME = "Registro_Formacion"; // Nombre Hoja Registros QA
   var USER_DIRECTORY_SHEET_NAME = "Directorio de Usuarios"; // Nombre Hoja Directorio
 
   // --- Columnas Esperadas Asignaciones ---
@@ -38,6 +38,9 @@
   var COL_QA_RESPUESTA_QS = "RESPUESTA QS";
   var COL_QA_VISTO_FORMACION = "VISTO FORMACIÓN";
   var COL_QA_VISTO_MELI = "VISTO MELI";
+  var COL_QA_COMENTARIO_BRM ="Comentario adicional";
+  var COL_QA_CRITICIDAD_QA ="CRITICIDAD";
+  var COL_QA_CASOREGISTRADO = "Caso_Base";
 
   // --- Columnas Esperadas Directorio Usuarios ---
   var COL_USER_NOMBRE = "Nombre";
@@ -54,8 +57,8 @@
    * Función Principal que sirve el HTML del Dashboard.
    */
   function doGet() {
-    return HtmlService.createHtmlOutputFromFile('Dashboard')
-      .setTitle('Dashboard Operativo ALMA')
+    return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('ALMA™')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
@@ -168,9 +171,9 @@
   function getTeams() {
     try {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
-      const sheet = ss.getSheetByName("ME_View");
+      const sheet = ss.getSheetByName("Base_Datos");
       if (!sheet) {
-        Logger.log("Error: Hoja 'ME_View' no encontrada en el spreadsheet de asignaciones.");
+        Logger.log("Error: Hoja 'Base_Datos' no encontrada en el spreadsheet de asignaciones.");
         return [];
       }
 
@@ -178,28 +181,28 @@
       const lastRow = sheet.getLastRow();
       
       if (lastRow <= headerRowIndex) {
-        Logger.log("Error: No hay datos en la hoja 'ME_View'.");
+        Logger.log("Error: No hay datos en la hoja 'Base_Datos'.");
         return [];
       }
 
-      // Buscar la columna que contiene los equipos (columna "Team_bu")
-      const teamBuColIdx = getColumnIndex(sheet, "Team_bu");
+      // Buscar la columna que contiene los equipos (columna "TEAM")
+      const teamBuColIdx = getColumnIndex(sheet, "TEAM");
       if (teamBuColIdx === -1) {
-        Logger.log("Error: Columna 'Team_bu' no encontrada en la hoja 'ME_View'.");
+        Logger.log("Error: Columna 'TEAM' no encontrada en la hoja 'Base_Datos'.");
         return [];
       }
 
-      // Obtener todos los valores únicos de la columna Team_bu
+      // Obtener todos los valores únicos de la columna TEAM
       const teamBuValues = sheet.getRange(headerRowIndex + 1, teamBuColIdx, lastRow - headerRowIndex, 1).getValues();
       const uniqueTeams = [...new Set(teamBuValues.flat().map(team => String(team || '').trim()).filter(Boolean))].sort();
       
       // Validar que hay equipos válidos
       if (uniqueTeams.length === 0) {
-        Logger.log("Advertencia: No se encontraron equipos válidos en la columna 'Team_bu'.");
+        Logger.log("Advertencia: No se encontraron equipos válidos en la columna 'TEAM'.");
         return [];
       }
       
-      Logger.log(`Equipos encontrados en ME_View: ${uniqueTeams.join(', ')}`);
+      Logger.log(`Equipos encontrados en Base_Datos: ${uniqueTeams.join(', ')}`);
       return uniqueTeams;
       
     } catch (e) {
@@ -276,7 +279,7 @@
 
       try {
           const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
-          const sheet = ss.getSheetByName("ME_View");
+          const sheet = ss.getSheetByName("Base_Datos");
           if (!sheet) return { headers: [], data: [] };
 
           const headerRowIndex = sheet.getFrozenRows() || 1;
@@ -289,7 +292,7 @@
           // Índices para control de apertura y cierre
           const aperturaColIdx = headers.findIndex(h => String(h).trim() === columnaApertura);
           const cierreColIdx = headers.findIndex(h => String(h).trim() === columnaCierre);
-          const teamBuColIdx = getColumnIndex(sheet, "Team_bu");
+          const teamBuColIdx = getColumnIndex(sheet, "TEAM");
           const ldapColIdx = indices[8]; // Usuario LDAP
           if (ldapColIdx === -1 || cierreColIdx === -1 || teamBuColIdx === -1) return { headers: [...columnasRequeridas, columnaApertura, columnaCierre, 'rowIndex'], data: [] };
 
@@ -336,9 +339,9 @@
 
       try {
           const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
-          // Siempre usar la hoja ME_View
-          const sheet = ss.getSheetByName("ME_View");
-          if (!sheet) throw new Error(`Hoja 'ME_View' no encontrada.`);
+          // Siempre usar la hoja Base_Datos
+          const sheet = ss.getSheetByName("Base_Datos");
+          if (!sheet) throw new Error(`Hoja 'Base_Datos' no encontrada.`);
 
           const marcaEGColIdx = getColumnIndex(sheet, COL_MARCA_EG);
           const marcaCIColIdx = getColumnIndex(sheet, COL_MARCA_CI);
@@ -346,7 +349,7 @@
           const caseColIdx = getColumnIndex(sheet, COL_CASO); 
 
           if ([marcaEGColIdx, marcaCIColIdx, cierreColIdx, caseColIdx].includes(-1)) {
-              throw new Error(`Una o más columnas de configuración no se encontraron en 'ME_View'.`);
+              throw new Error(`Una o más columnas de configuración no se encontraron en 'Base_Datos'.`);
           }
 
           const sheetRowToUpdate = parseInt(rowIndex, 10);
@@ -382,9 +385,9 @@
     }
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID_ASIGNACIONES);
-    // Siempre usar la hoja ME_View
-    const sheet = ss.getSheetByName("ME_View");
-    if (!sheet) throw new Error(`La hoja 'ME_View' no fue encontrada.`);
+    // Siempre usar la hoja Base_Datos
+    const sheet = ss.getSheetByName("Base_Datos");
+    if (!sheet) throw new Error(`La hoja 'Base_Datos' no fue encontrada.`);
 
     const ldapColIdx = getColumnIndex(sheet, COL_USUARIO_LDAP);
     const caseColIdx = getColumnIndex(sheet, COL_CASO);
@@ -531,7 +534,7 @@
     }
   }
 
-  function actualizarRegistroQA(registroId, nuevoEstado, nuevaRespuesta, vistoFormacion, vistoMeli, expectedCaso, respuestaQS, ldapQaQueRegistro, userInfo) {
+  function actualizarRegistroQA(registroId, nuevoEstado, nuevaRespuesta, vistoFormacion, vistoMeli, expectedCaso, respuestaQS, ldapQaQueRegistro, userInfo, complejidad, comentarioAdicional) {
     try {
       const cleanRegistroId = String(registroId).trim();
       const cleanExpectedCaso = String(expectedCaso).trim();
@@ -562,6 +565,12 @@
         columnIndexes[key] = index;
       }
 
+      // NUEVO: índices para criticidad y comentario adicional
+      const criticidadIdx = getColumnIndex(hoja, COL_QA_CRITICIDAD_QA);
+      const comentarioAdicionalIdx = getColumnIndex(hoja, COL_QA_COMENTARIO_BRM);
+      if (criticidadIdx === -1) missingColumns.push(COL_QA_CRITICIDAD_QA);
+      if (comentarioAdicionalIdx === -1) missingColumns.push(COL_QA_COMENTARIO_BRM);
+
       if (missingColumns.length > 0) {
         throw new Error(`Las siguientes columnas esenciales no se encontraron en la hoja QA: [${missingColumns.join(', ')}]. Por favor, verifique que los nombres de las columnas en la hoja de cálculo coincidan exactamente con los esperados, incluyendo acentos y espacios.`);
       }
@@ -591,6 +600,10 @@
       hoja.getRange(sheetRowIndex, columnIndexes.respuestaQsIdx).setValue(respuestaQS);
       hoja.getRange(sheetRowIndex, columnIndexes.formacionIdx).setValue(validVistoOptions.includes(String(vistoFormacion)) ? String(vistoFormacion) : "");
       hoja.getRange(sheetRowIndex, columnIndexes.meliIdx).setValue(validVistoOptions.includes(String(vistoMeli)) ? String(vistoMeli) : "");
+
+      // NUEVO: Actualizar criticidad y comentario adicional
+      hoja.getRange(sheetRowIndex, criticidadIdx).setValue(complejidad);
+      hoja.getRange(sheetRowIndex, comentarioAdicionalIdx).setValue(comentarioAdicional);
 
       if (String(nuevoEstado).trim() !== "" || String(nuevaRespuesta).trim() !== "" || String(respuestaQS).trim() !== "") {
         var now = new Date();
@@ -675,3 +688,4 @@
     }
     return [];
   }
+

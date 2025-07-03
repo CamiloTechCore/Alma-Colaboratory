@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Operativo</title>
+  <title>ALMA™</title>
+  <link rel="icon" href="https://drive.google.com/file/d/1dolNUBBxqATuCEZpt05bgKSzQL1tO4fA/view?usp=sharing">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" xintegrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
@@ -19,7 +20,17 @@
     #password-group {display: none;}
     
     /* --- Contenedor Principal del Dashboard --- */
-    .dashboard-container{background:#fff;padding:25px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);width:95%;max-width:1800px;margin-top:20px;margin-bottom:20px;display:none}
+    .dashboard-container{
+        background:#fff;
+        padding:25px;
+        border-radius:10px;
+        box-shadow:0 4px 12px rgba(0,0,0,.1);
+        width:100%;
+        max-width:100vw;
+        margin-top:20px;
+        margin-bottom:20px;
+        display:none
+    }
     .role-administrador{} .role-qa{} .role-qs{}
     
     /* --- Header del Dashboard --- */
@@ -68,7 +79,17 @@
     .multiselect-options input[type=checkbox]{margin-right:8px}
     
     /* --- Estilos de Tablas --- */
-    .table-container{max-height:650px;overflow-y:auto;margin-top:20px;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,.07);width:100%;box-sizing:border-box}
+    .table-container{
+        max-height:650px;
+        overflow-y:auto;
+        overflow-x:auto;
+        margin-top:20px;
+        border:1px solid #dee2e6;
+        border-radius:8px;
+        box-shadow:0 2px 5px rgba(0,0,0,.07);
+        width:100%;
+        box-sizing:border-box
+    }
     table{width:100%;border-collapse:collapse;background:#fff}
     th{color:#fff;position:sticky;top:0;z-index:1;font-weight:600;vertical-align:middle}
     tr:nth-child(even){background-color:#f8f9fa}
@@ -286,9 +307,27 @@
             </form>
         </div>
 
-        <div class="qa-header-search-container">
-            <h3><i class="fas fa-list-alt icon"></i>Registros Guardados QA</h3>
-            <input type="text" id="qaSearchInput" placeholder="Buscar por Fecha, LDAP QA, Interacción...">
+        <div id="filtros-formador" class="controls-container" style="margin-bottom: 15px;">
+            <div class="control-group">
+                <label for="qaEstadoFilter"><i class="fas fa-filter icon"></i>Filtrar por Estado:</label>
+                <select id="qaEstadoFilter" onchange="filterAndDisplayQaData()">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente de revisión">Pendiente de revisión</option>
+                    <option value="Revisado Formación">Revisado Formación</option>
+                    <option value="Revisado QS">Revisado QS</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="qaFechaRegistroFilter"><i class="fas fa-calendar-alt icon"></i>Filtrar por Fecha de Registro:</label>
+                <select id="qaFechaRegistroFilter">
+                    <option value="">Todas las fechas</option>
+                </select>
+            </div>
+            <div class="control-group" style="flex: 0 0 auto;">
+                <button id="clearQaFiltersBtn" class="btn-secondary" onclick="clearQaFilters()">
+                    <i class="fas fa-eraser icon"></i>Limpiar Filtros
+                </button>
+            </div>
         </div>
         <div class="table-container">
             <table id="tablaRegistros">
@@ -1060,7 +1099,24 @@
 
       body.innerHTML = `<tr><td colspan="14" class="no-data"><i class="fas fa-spinner fa-spin"></i>Cargando registros...</td></tr>`;
       document.getElementById("qaPaginationControls").innerHTML = '';
-      document.getElementById('qaSearchInput').value = '';
+      const searchInput = document.getElementById('qaSearchInput');
+      if (searchInput) {
+        searchInput.value = '';
+      } else {
+        console.log('Elemento null: qaSearchInput');
+      }
+      const estadoFilter = document.getElementById('qaEstadoFilter');
+      if (estadoFilter) {
+        estadoFilter.value = '';
+      } else {
+        console.log('Elemento null: qaEstadoFilter');
+      }
+      const fechaRegistroFilter = document.getElementById('qaFechaRegistroFilter');
+      if (fechaRegistroFilter) {
+        fechaRegistroFilter.value = '';
+      } else {
+        console.log('Elemento null: qaFechaRegistroFilter');
+      }
       setRefreshButtonState(true);
 
       google.script.run
@@ -1070,11 +1126,13 @@
             body.innerHTML = `<tr><td colspan="14" class="no-data">No hay registros QA para mostrar.</td></tr>`;
             currentQaData = [];
             currentFilteredQaData = [];
+            actualizarFiltroFechaRegistro();
           } else {
             currentQaData = data.slice(1);
             currentFilteredQaData = [...currentQaData];
             qaCurrentPage = 1;
             displayQaPage(currentFilteredQaData);
+            actualizarFiltroFechaRegistro();
           }
         })
         .withFailureHandler(e => {
@@ -1085,10 +1143,29 @@
     }
 
     function filterAndDisplayQaData(term) {
+      // Obtener el término de búsqueda del input si no se proporciona
+      if (term === undefined) {
+        term = document.getElementById('qaSearchInput')?.value || '';
+      }
+      
+      // Obtener el filtro de estado
+      const estadoFilter = document.getElementById('qaEstadoFilter')?.value || '';
+      
       term = term.toLowerCase().trim();
-      currentFilteredQaData = term ? currentQaData.filter(row => {
-        return (row[0] || '').toLowerCase().includes(term) || (row[1] || '').toLowerCase().includes(term) || (row[4] || '').toLowerCase().includes(term);
-      }) : [...currentQaData];
+      
+      currentFilteredQaData = currentQaData.filter(row => {
+        // Filtro por término de búsqueda (fecha, LDAP QA, interacción)
+        const matchesSearch = !term || 
+          (row[0] || '').toLowerCase().includes(term) || 
+          (row[1] || '').toLowerCase().includes(term) || 
+          (row[4] || '').toLowerCase().includes(term);
+        
+        // Filtro por estado (columna 7)
+        const matchesEstado = !estadoFilter || (row[7] || '') === estadoFilter;
+        
+        return matchesSearch && matchesEstado;
+      });
+      
       qaCurrentPage = 1;
       displayQaPage(currentFilteredQaData);
     }
@@ -1098,7 +1175,18 @@
         const searchTerm = document.getElementById('qaSearchInput')?.value.trim() || '';
         
         if (!data || data.length === 0) {
-            const msg = searchTerm ? `No se encontraron registros para "${searchTerm}".` : "No hay registros QA disponibles.";
+            const searchTerm = document.getElementById('qaSearchInput')?.value.trim() || '';
+            const estadoFilter = document.getElementById('qaEstadoFilter')?.value || '';
+            
+            let msg = "No hay registros QA disponibles.";
+            if (searchTerm && estadoFilter) {
+                msg = `No se encontraron registros para "${searchTerm}" con estado "${estadoFilter}".`;
+            } else if (searchTerm) {
+                msg = `No se encontraron registros para "${searchTerm}".`;
+            } else if (estadoFilter) {
+                msg = `No se encontraron registros con estado "${estadoFilter}".`;
+            }
+            
             body.innerHTML = `<tr><td colspan="14" class="no-data">${msg}</td></tr>`;
             renderQaPaginationControls(0);
             return;
@@ -1154,11 +1242,33 @@
         }
     }
 
+    function clearQaFilters() {
+        const searchInput2 = document.getElementById('qaSearchInput');
+        if (searchInput2) {
+            searchInput2.value = '';
+        } else {
+            console.log('Elemento null: qaSearchInput (clearQaFilters)');
+        }
+        const estadoFilter2 = document.getElementById('qaEstadoFilter');
+        if (estadoFilter2) {
+            estadoFilter2.value = '';
+        } else {
+            console.log('Elemento null: qaEstadoFilter (clearQaFilters)');
+        }
+        const fechaRegistroFilter2 = document.getElementById('qaFechaRegistroFilter');
+        if (fechaRegistroFilter2) {
+            fechaRegistroFilter2.value = '';
+        } else {
+            console.log('Elemento null: qaFechaRegistroFilter (clearQaFilters)');
+        }
+        filterAndDisplayQaData();
+    }
+
     function abrirPopupEdicionQA(buttonElement) {
         const rowDataString = buttonElement.getAttribute('data-row-data').replace(/&apos;/g,"'").replace(/"/g,'"');
         const rowData = JSON.parse(rowDataString);
         
-        const [registroId, ldapQaQueRegistro, , , casoNumero, , , estado, , respuesta, respuestaQS, vistoFormacion, vistoMeli] = rowData;
+        const [registroId, ldapQaQueRegistro, , , casoNumero, , , estado, , respuesta, respuestaQS, vistoFormacion, vistoMeli, complejidad, comentarioAdicional] = rowData;
 
         const isAdmin = currentUser.rol === 'Administrador';
         const isQs = currentUser.rol === 'QS';
@@ -1169,9 +1279,13 @@
             <label class="swal-label" for="swal-estado">Estado:</label><select id="swal-estado" class="swal-select"><option value="Pendiente de revisión" ${estado === 'Pendiente de revisión' ? 'selected' : ''}>Pendiente de revisión</option><option value="Revisado Formación" ${estado === 'Revisado Formación' ? 'selected' : ''}>Revisado Formación</option><option value="Revisado QS" ${estado === 'Revisado QS' ? 'selected' : ''}>Revisado QS</option></select>
             <label class="swal-label" for="swal-respuesta">Respuesta (Admin):</label><textarea id="swal-respuesta" class="swal-input" rows="3" ${respuestaAdminDisabled}>${respuesta || ''}</textarea>
             <label class="swal-label" for="swal-respuesta-qs">Respuesta QS:</label><textarea id="swal-respuesta-qs" class="swal-input" rows="3" ${respuestaQsDisabled}>${respuestaQS || ''}</textarea>
+            <label class="swal-label" for="swal-comentario-adicional">Comentario adicional:</label><textarea id="swal-comentario-adicional" class="swal-input" rows="2">${comentarioAdicional || ''}</textarea>
             <div class="swal-qa-grid">
               <div><label class="swal-label" for="swal-formacion">Visto Formación:</label><select id="swal-formacion" class="swal-select" ${respuestaAdminDisabled}><option value="" ${!vistoFormacion ?'selected':''}>Seleccionar...</option><option value="Sí" ${vistoFormacion==='Sí'?'selected':''}>Sí</option><option value="No" ${vistoFormacion==='No'?'selected':''}>No</option></select></div>
               <div><label class="swal-label" for="swal-meli">Visto Meli:</label><select id="swal-meli" class="swal-select" ${respuestaAdminDisabled}><option value="" ${!vistoMeli?'selected':''}>Seleccionar...</option><option value="Sí" ${vistoMeli==='Sí'?'selected':''}>Sí</option><option value="No" ${vistoMeli==='No'?'selected':''}>No</option></select></div>
+            </div>
+            <div class="swal-qa-grid">
+              <div><label class="swal-label" for="swal-complejidad">Complejidad:</label><select id="swal-complejidad" class="swal-select" ${respuestaAdminDisabled}><option value="" ${!complejidad?'selected':''}>Seleccionar...</option><option value="Alta" ${complejidad==='Alta'?'selected':''}>Alta</option><option value="Media" ${complejidad==='Media'?'selected':''}>Media</option><option value="Baja" ${complejidad==='Baja'?'selected':''}>Baja</option></select></div>
             </div></div>`;
 
         Swal.fire({
@@ -1181,12 +1295,14 @@
                 nuevoEstado: document.getElementById('swal-estado').value,
                 nuevaRespuesta: document.getElementById('swal-respuesta').value,
                 respuestaQS: document.getElementById('swal-respuesta-qs').value,
+                comentarioAdicional: document.getElementById('swal-comentario-adicional').value,
                 vistoFormacion: document.getElementById('swal-formacion').value,
-                vistoMeli: document.getElementById('swal-meli').value
+                vistoMeli: document.getElementById('swal-meli').value,
+                complejidad: document.getElementById('swal-complejidad').value
             })
         }).then(result => {
             if (result.isConfirmed) {
-                const { nuevoEstado, nuevaRespuesta, respuestaQS, vistoFormacion, vistoMeli } = result.value;
+                const { nuevoEstado, nuevaRespuesta, respuestaQS, comentarioAdicional, vistoFormacion, vistoMeli, complejidad } = result.value;
                 Swal.showLoading();
                 google.script.run
                     .withSuccessHandler(msg => { 
@@ -1194,7 +1310,7 @@
                       cargarRegistrosDesdeSheetsQA(); 
                     })
                     .withFailureHandler(err => { Swal.fire('Error', `No se pudo guardar: ${err.message}`, 'error'); })
-                    .actualizarRegistroQA(registroId, nuevoEstado, nuevaRespuesta, vistoFormacion, vistoMeli, casoNumero, respuestaQS, ldapQaQueRegistro, currentUser);
+                    .actualizarRegistroQA(registroId, nuevoEstado, nuevaRespuesta, vistoFormacion, vistoMeli, casoNumero, respuestaQS, ldapQaQueRegistro, currentUser, complejidad, comentarioAdicional);
             }
         });
     }
@@ -1204,7 +1320,7 @@
         google.script.run
             .withSuccessHandler(notifications => {
                 if (notifications && notifications.length > 0) {
-                    const notificationHtml = '<ul style="text-align: left; margin-leftx: 20px;">' + notifications.map(n => `<li>${n}</li>`).join('') + '</ul>';
+                    const notificationHtml = '<ul style="text-align: left; margin-left: 20px;">' + notifications.map(n => `<li>${n}</li>`).join('') + '</ul>';
                     Swal.fire({
                         title: '<strong>Tienes una respuesta en Seguimiento QA</strong>',
                         icon: 'info',
@@ -1222,6 +1338,49 @@
             .checkForNotifications(currentUser);
     }
 
+    // --- Filtro de Fecha de Registro ---
+    function actualizarFiltroFechaRegistro() {
+        const select = document.getElementById('qaFechaRegistroFilter');
+        if (!select) return;
+        // Obtener solo la parte de la fecha (antes de la coma o espacio)
+        const fechas = Array.from(new Set(currentQaData.map(row => {
+            const raw = row[0] || '';
+            return raw.split(',')[0].trim();
+        }))).filter(Boolean).sort();
+        select.innerHTML = '<option value="">Todas las fechas</option>' + fechas.map(f => `<option value="${f}">${f}</option>`).join('');
+    }
+
+    // Al cambiar el filtro de fecha, filtrar la tabla
+    if (document.getElementById('qaFechaRegistroFilter')) {
+        document.getElementById('qaFechaRegistroFilter').addEventListener('change', function() {
+            filtrarPorFechaRegistro();
+        });
+    }
+
+    function filtrarPorFechaRegistro() {
+        const fecha = document.getElementById('qaFechaRegistroFilter').value;
+        let dataFiltrada = fecha ? currentQaData.filter(row => {
+            const raw = row[0] || '';
+            const soloFecha = raw.split(',')[0].trim();
+            return soloFecha === fecha;
+        }) : [...currentQaData];
+        // Aplicar también el filtro de estado si está activo
+        const estado = document.getElementById('qaEstadoFilter')?.value || '';
+        if (estado) {
+            dataFiltrada = dataFiltrada.filter(row => (row[7] || '') === estado);
+        }
+        // Aplicar también el filtro de búsqueda si está activo
+        const term = document.getElementById('qaSearchInput')?.value.toLowerCase().trim() || '';
+        if (term) {
+            dataFiltrada = dataFiltrada.filter(row =>
+                (row[0] || '').toLowerCase().includes(term) ||
+                (row[1] || '').toLowerCase().includes(term) ||
+                (row[4] || '').toLowerCase().includes(term)
+            );
+        }
+        qaCurrentPage = 1;
+        displayQaPage(dataFiltrada);
+    }
   </script>
 </body>
 </html>
