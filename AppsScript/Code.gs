@@ -3,8 +3,8 @@
    */
 
   // --- Constantes Globales ---
-  var SPREADSHEET_ID_ASIGNACIONES = "1L8d4_S8M8v2kwKmkxsmDOgKd97sM1Lxq7WsYfkRaW1c"; // ID Hoja Asignaciones
-  var SPREADSHEET_ID_QA = "1L8d4_S8M8v2kwKmkxsmDOgKd97sM1Lxq7WsYfkRaW1c"; // ID Hoja QA y Directorio
+  var SPREADSHEET_ID_ASIGNACIONES = "1FcmnSAIsRaas_gYUJG32COh7_SCoc94_r-nu169u2Mg"; // ID Hoja Asignaciones
+  var SPREADSHEET_ID_QA = "1FcmnSAIsRaas_gYUJG32COh7_SCoc94_r-nu169u2Mg"; // ID Hoja QA y Directorio
   var QA_SHEET_NAME = "Registro_Formacion"; // Nombre Hoja Registros QA
   var USER_DIRECTORY_SHEET_NAME = "Directorio de Usuarios"; // Nombre Hoja Directorio
 
@@ -41,6 +41,7 @@
   var COL_QA_COMENTARIO_BRM ="Comentario adicional";
   var COL_QA_CRITICIDAD_QA ="CRITICIDAD";
   var COL_QA_CASOREGISTRADO = "Caso_Base";
+    var COL_BU_QA ="BU";
 
   // --- Columnas Esperadas Directorio Usuarios ---
   var COL_USER_NOMBRE = "Nombre";
@@ -688,4 +689,5 @@
     }
     return [];
   }
+
 
